@@ -149,6 +149,32 @@ export function Offer() {
   );
 }
 
+const products = [
+  { src: "/photos/stand-instagram.jpg", name: "Instagram стенд", alt: "Instagram NFC болон QR кодтой ширээний стенд" },
+  { src: "/photos/stand-facebook.jpg", name: "Facebook стенд", alt: "Facebook NFC болон QR кодтой ширээний стенд" },
+  { src: "/photos/stand-blank.jpg", name: "Хоосон стенд", alt: "Цагаан хоосон ширээний стенд" },
+  { src: "/photos/sticker-instagram.jpg", name: "Instagram наалт", alt: "Instagram NFC наалт", zoom: 2.1 },
+  { src: "/photos/sticker-facebook.jpg", name: "Facebook наалт", alt: "Facebook NFC наалт", zoom: 2.1 },
+  { src: "/photos/stand-blank-tall.jpg", name: "Хоосон стенд (босоо)", alt: "Цагаан хоосон босоо ширээний стенд" },
+];
+
+export function Products() {
+  return (
+    <section id="products" className={`${wrap} pt-[240px]`}>
+      <p className={`${eyebrow} mb-6 text-mute`}>Бүтээгдэхүүн</p>
+      <h2 className={`${h2} mb-[120px] max-w-[820px]`}>Бидний хийдэг зүйлс.</h2>
+      <div className="grid grid-cols-1 gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+        {products.map((p, i) => (
+          <figure key={p.src} className="m-0">
+            <Photo n={i + 1} label={p.name} src={p.src} alt={p.alt} aspect="3 / 4" zoom={p.zoom} />
+            <figcaption className="mt-4 text-[15px] font-medium">{p.name}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Price() {
   return (
     <section id="price" className={`${wrap} pt-[240px]`}>

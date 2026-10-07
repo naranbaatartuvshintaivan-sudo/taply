@@ -11,7 +11,6 @@ export const CONTACT = {
     { label: "9973 2298", href: "tel:+97699732298" },
     { label: "8018 8488", href: "tel:+97680188488" },
   ],
-  // АНХААР: үсгийн алдаатай байж магадгүй (officialtaply?) — баталгаажуулах
   email: "officaltyply@gmail.com",
 };
 

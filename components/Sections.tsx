@@ -164,7 +164,14 @@ export function Products() {
         {PRODUCTS.map((p, i) => (
           <figure key={p.slug} className="m-0">
             <Link href={`/products/${p.slug}`} aria-label={`${p.name} — дэлгэрэнгүй`} className="block hover:opacity-90">
-              <Photo n={i + 1} label={p.name} src={p.src} alt={p.alt} aspect="3 / 4" zoom={p.zoom} />
+              <Photo
+                n={i + 1}
+                label={p.name}
+                src={p.src}
+                alt={p.alt}
+                aspect="3 / 4"
+                sizes="(min-width:1024px) 34vw, (min-width:640px) 50vw, 100vw"
+              />
             </Link>
             <figcaption className="mt-4">
               <div className="text-[15px] font-medium">{p.name}</div>

@@ -53,7 +53,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </Link>
 
         <div className="mt-8 grid gap-10 lg:grid-cols-2 lg:gap-20">
-          <Photo n={1} label={p.name} src={p.src} alt={p.alt} aspect="3 / 4" zoom={p.zoom} />
+          <Photo n={1} label={p.name} src={p.src} alt={p.alt} aspect="3 / 4" />
 
           <div className="lg:pt-4">
             <p className={`${eyebrow} mb-6 text-mute`}>Бүтээгдэхүүн</p>
@@ -110,7 +110,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             {others.map((o, i) => (
               <Link key={o.slug} href={`/products/${o.slug}`} className="group block">
                 <div className="group-hover:opacity-90">
-                  <Photo n={i + 1} label={o.name} src={o.src} alt={o.alt} aspect="3 / 4" zoom={o.zoom} />
+                  <Photo
+                    n={i + 1}
+                    label={o.name}
+                    src={o.src}
+                    alt={o.alt}
+                    aspect="3 / 4"
+                    sizes="(min-width:1024px) 20vw, (min-width:640px) 33vw, 50vw"
+                  />
                 </div>
                 <div className="mt-3 text-sm font-medium">{o.name}</div>
               </Link>

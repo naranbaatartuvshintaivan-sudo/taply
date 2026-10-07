@@ -7,12 +7,21 @@ type Props = {
   alt?: string;
   height?: number;
   aspect?: string; // жишээ нь "3 / 4" — height-ийн оронд, өргөнөөс хамаарч өөрчлөгдөнө
-  zoom?: number; // жижиг бараа дунд нь байвал ойртуулна (файлыг өөрчлөхгүй)
+  sizes?: string; // зураг дэлгэц дээр хэр өргөн гарахыг хэлнэ — зөв хэмжээтэй файл татахад хэрэгтэй
   dark?: boolean;
 };
 
 // Зураг ирээгүй үед саарал placeholder, ирсэн үед next/image
-export function Photo({ n, label, src, alt = "", height, aspect, zoom, dark }: Props) {
+export function Photo({
+  n,
+  label,
+  src,
+  alt = "",
+  height,
+  aspect,
+  sizes = "(min-width:1024px) 50vw, 100vw",
+  dark,
+}: Props) {
   return (
     <div
       className={
@@ -23,14 +32,7 @@ export function Photo({ n, label, src, alt = "", height, aspect, zoom, dark }: P
       style={aspect ? { aspectRatio: aspect } : { height }}
     >
       {src ? (
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          sizes="(min-width:1024px) 50vw, 100vw"
-          className="object-cover"
-          style={zoom ? { transform: `scale(${zoom})` } : undefined}
-        />
+        <Image src={src} alt={alt} fill sizes={sizes} quality={90} className="object-cover" />
       ) : (
         <span
           className={

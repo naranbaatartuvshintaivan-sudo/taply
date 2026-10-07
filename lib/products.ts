@@ -5,7 +5,6 @@ export type Product = {
   name: string;
   src: string; // public/photos/...
   alt: string;
-  zoom?: number; // жижиг бараа дунд нь байвал ойртуулна
   summary: string; // нүүр хуудасны карт болон хайлтын тайлбар
   about: string; // дэлгэрэнгүй хуудсан дээрх тайлбар
   features: string[];
@@ -61,7 +60,6 @@ export const PRODUCTS: Product[] = [
     name: "Instagram наалт",
     src: "/photos/sticker-instagram.jpg",
     alt: "Instagram NFC наалт",
-    zoom: 2.1,
     summary: "Жижиг NFC наалт. Утсаа хүргэхэд л Instagram хуудас нээгдэнэ.",
     about:
       "Дээр нь “Follow us on Instagram” гэж бичсэн жижиг NFC наалт. Утсаа хүргэхэд таны Instagram хуудас шууд нээгдэнэ. Апп татах, QR уншуулах шаардлагагүй.",
@@ -76,7 +74,6 @@ export const PRODUCTS: Product[] = [
     name: "Facebook наалт",
     src: "/photos/sticker-facebook.jpg",
     alt: "Facebook NFC наалт",
-    zoom: 2.1,
     summary: "Жижиг NFC наалт. Утсаа хүргэхэд л Facebook хуудас нээгдэнэ.",
     about:
       "Дээр нь “Follow us on Facebook” гэж бичсэн жижиг NFC наалт. Утсаа хүргэхэд таны Facebook хуудас шууд нээгдэнэ. Апп татах, QR уншуулах шаардлагагүй.",

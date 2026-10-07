@@ -16,7 +16,7 @@ export function Photo({ n, label, src, alt = "", height, aspect, zoom, dark }: P
   return (
     <div
       className={
-        "relative flex w-full items-center justify-center overflow-hidden " +
+        "relative flex w-full items-center justify-center overflow-hidden rounded-[6px] " +
         (src ? "" : "border border-dashed ") +
         (dark ? "border-[#4a4a4a] bg-ink-soft" : "border-[#b5b5b5] bg-ph")
       }

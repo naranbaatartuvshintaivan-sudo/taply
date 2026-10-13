@@ -120,7 +120,6 @@ export function TransitionProvider({
         later(() => set("idle"), PHASE_MS);
       });
     }, PHASE_MS);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tiles = useMemo(() => {

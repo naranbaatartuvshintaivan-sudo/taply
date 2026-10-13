@@ -12,7 +12,8 @@ const schema = z.object({
   WIRE_SECRET_KEY: z
     .string()
     .regex(/^sk_(live|test)_\S+$/, "sk_live_ эсвэл sk_test_-ээр эхлэх ёстой"),
-  WIRE_WEBHOOK_SECRET: z.string().regex(/^whsec_\S+$/, "whsec_-ээр эхлэх ёстой"),
+  // Webhook бүртгэхээс өмнө хоосон байж болно — тэр үед webhook 503 буцааж, Wire дахин илгээнэ
+  WIRE_WEBHOOK_SECRET: z.string().regex(/^whsec_\S+$/, "whsec_-ээр эхлэх ёстой").optional(),
 
   TELEGRAM_BOT_TOKEN: z.string().regex(/^\d+:[\w-]+$/, "BotFather-ийн token хэлбэртэй байх ёстой"),
   TELEGRAM_CHAT_ID: z.string().regex(/^-?\d+$/, "тоо байх ёстой (group бол - тэмдэгтэй)"),

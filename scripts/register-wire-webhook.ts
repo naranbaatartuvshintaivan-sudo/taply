@@ -16,14 +16,24 @@ process.loadEnvFile(ENV_FILE);
 const key = process.env.WIRE_SECRET_KEY ?? "";
 if (!/^sk_(live|test)_/.test(key)) throw new Error("WIRE_SECRET_KEY .env.local-д алга эсвэл буруу");
 
-async function wire(method: string, path: string, body?: unknown) {
+type WireJson = {
+  id?: string;
+  url?: string;
+  status?: string;
+  livemode?: boolean;
+  secret?: string;
+  data?: { id: string; url: string }[];
+  error?: { code?: string };
+};
+
+async function wire(method: string, path: string, body?: unknown): Promise<WireJson> {
   const headers: Record<string, string> = { Authorization: `Bearer ${key}` };
   if (method !== "GET") {
     headers["Content-Type"] = "application/json";
     headers["Idempotency-Key"] = `register-webhook-${randomUUID()}`;
   }
   const res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  const json = (await res.json().catch(() => null)) as Record<string, any> | null;
+  const json = (await res.json().catch(() => null)) as WireJson | null;
   if (!res.ok) throw new Error(`Wire ${method} ${path} → ${res.status} ${json?.error?.code ?? ""}`);
   return json!;
 }

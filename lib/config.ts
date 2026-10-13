@@ -48,3 +48,12 @@ export const PRICE_CARDS: PriceCard[] = [
     ],
   },
 ];
+
+// Хот доторх хүргэлт — бусад газар утсаар тохирно
+export const DELIVERY = {
+  fee: 7000,
+  freeFromQty: 3, // нийт ширхэг ийм буюу түүнээс дээш бол үнэгүй
+  districts: ["Баянзүрх", "Баянгол", "Сүхбаатар", "Чингэлтэй", "Хан-Уул", "Сонгинохайрхан"],
+};
+
+export const REFUND_DAYS = 7;

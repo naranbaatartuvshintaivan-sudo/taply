@@ -95,7 +95,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               {CONTACT.phones.map((ph, i) => (
                 <span key={ph.href}>
                   {i > 0 && " · "}
-                  <a href={ph.href} className="font-bold text-ink hover:opacity-55">
+                  <a href={ph.href} className="inline-flex min-h-11 items-center font-bold text-ink hover:opacity-55">
                     {ph.label}
                   </a>
                 </span>

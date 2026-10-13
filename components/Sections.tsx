@@ -7,6 +7,8 @@ import { Photo } from "./Photo";
 const wrap = "mx-auto max-w-[1360px] px-6 md:px-12";
 const eyebrow = "text-[13px] font-medium uppercase tracking-[.22em]";
 const h2 = "font-bold leading-[1.05] tracking-[-.035em] text-[clamp(40px,5.5vw,76px)]";
+// Хоёр баганат зургийн хэмжээ (1360px wrap, 48px padding, 24px зай)
+const HALF = "(min-width:1360px) 620px, (min-width:768px) 46vw, 100vw";
 
 export function Hero() {
   return (
@@ -37,8 +39,25 @@ export function Hero() {
           </GoLink>
         </div>
       </div>
-      <div className="mt-[120px]">
-        <Photo n={1} label="Хүн NFC картаа барьж байгаа (өргөн кадр)" height={640} />
+      <div className="mt-[120px] grid gap-6 md:grid-cols-2">
+        <Photo
+          n={1}
+          label="Facebook стенд"
+          src="/products/fb-stand.png"
+          alt="Facebook хуудас руу холбодог NFC болон QR кодтой ширээний стенд"
+          aspect="4 / 3"
+          sizes={HALF}
+          priority
+        />
+        <Photo
+          n={2}
+          label="Instagram стенд"
+          src="/products/ig-stand.png"
+          alt="Instagram хуудас руу холбодог NFC болон QR кодтой ширээний стенд"
+          aspect="4 / 3"
+          sizes={HALF}
+          priority
+        />
       </div>
     </section>
   );
@@ -64,8 +83,29 @@ export function How() {
           </div>
         ))}
       </div>
-      <div className="mt-24">
-        <Photo n={2} label="Утсаа картанд хүргэж буй close-up (tap-ийн мөч)" height={420} />
+      <div className="mt-24 grid gap-6 md:grid-cols-2">
+        <figure className="m-0">
+          <Photo
+            n={3}
+            label="Facebook наалт"
+            src="/products/fb-sticker.png"
+            alt="100×100 мм хэмжээтэй Facebook NFC наалт"
+            aspect="1 / 1"
+            sizes={HALF}
+          />
+          <figcaption className="mt-4 text-[13px] text-mute">Наалт · 100 × 100 мм</figcaption>
+        </figure>
+        <figure className="m-0">
+          <Photo
+            n={4}
+            label="Instagram наалт"
+            src="/products/ig-sticker.png"
+            alt="Ширээн дээр тавьсан Instagram NFC наалт"
+            aspect="1 / 1"
+            sizes={HALF}
+          />
+          <figcaption className="mt-4 text-[13px] text-mute">Ширээн дээр тавьсан байдал</figcaption>
+        </figure>
       </div>
     </section>
   );
@@ -151,7 +191,7 @@ export function Offer() {
   );
 }
 
-const chip = "inline-flex min-h-9 items-center justify-center rounded-full px-4 text-[13px] font-bold";
+const chip = "inline-flex min-h-11 items-center justify-center rounded-full px-4 text-[13px] font-bold";
 const chipSolid = `${chip} bg-ink text-white hover:bg-[#2a2a2a]`;
 const chipLine = `${chip} border-[1.5px] border-ink hover:bg-ink hover:text-white`;
 
@@ -234,6 +274,22 @@ export function Price() {
           </div>
         ))}
       </div>
+      <div className="mt-6 flex flex-wrap items-baseline gap-x-16 gap-y-6 border-[1.5px] border-ink px-6 py-12 sm:px-12">
+        <div className="flex-[0_0_auto] text-[clamp(44px,5vw,64px)] font-extrabold leading-none tracking-[-.04em]">
+          7 хоног
+        </div>
+        <div className="max-w-[560px] flex-[1_1_300px]">
+          <div className="text-xl font-bold tracking-[-.01em]">Ажиллахгүй бол мөнгийг бүтэн буцаана.</div>
+          <p className="mb-0 mt-3 text-[15px] leading-[1.7] text-body">
+            Хүлээн авснаас хойш 7 хоногийн дотор карт ажиллахгүй бол бидэнд хэлээрэй — төлсөн
+            мөнгийг тань бүтэн буцаана.{" "}
+            <Link href="/terms" className="font-bold text-ink underline underline-offset-4 hover:opacity-55">
+              Нөхцөл
+            </Link>
+          </p>
+        </div>
+      </div>
+
       <p className="mb-0 mt-12 max-w-[640px] text-[15px] leading-[1.7] text-body">
         Custom загвар үнэгүй. Лого, бичвэрээ илгээнэ, батлагдсанаас хойш 3–5 хоногт бэлэн. Хот
         доторх хүргэлт 7,000₮, 3 ба түүнээс дээш ширхэг бол үнэгүй. 30 ширхэгээс дээш бол утсаар
@@ -243,6 +299,24 @@ export function Price() {
   );
 }
 
+const orderChoices = [
+  {
+    href: "/order",
+    eyebrow: "Facebook · Instagram",
+    title: "Энгийн карт",
+    desc: "Бэлэн загвартай наалт эсвэл стенд. Линкээ оруулаад шууд төлнө.",
+    from: "34,900₮-өөс",
+  },
+  {
+    href: "/custom",
+    eyebrow: "Таны брэнд",
+    title: "Өөрийн логотой",
+    desc: "Логогоо илгээнэ. 3 загварыг үнэгүй гаргаж имэйлээр явуулна, та сонгоно.",
+    from: "44,900₮-өөс",
+    dark: true,
+  },
+];
+
 export function Order() {
   return (
     <section id="order" className={`${wrap} pt-[280px]`}>
@@ -250,28 +324,58 @@ export function Order() {
         Захиалах.
       </h2>
       <p className="mb-16 mt-14 max-w-[520px] text-xl leading-[1.55] text-[#2a2a2a]">
-        Манайхтай чатлаад бизнесээ хэлээрэй. Бусдыг нь бид хийнэ.
+        Аль картаа сонгоод онлайнаар захиална уу. Бусдыг нь бид хийнэ.
       </p>
-      <div className="flex flex-wrap gap-4">
+      <div className="grid gap-6 md:grid-cols-2">
+        {orderChoices.map((c) => (
+          <Link
+            key={c.href}
+            href={c.href}
+            className={
+              "group flex min-h-[320px] flex-col justify-between px-6 py-10 sm:px-12 sm:py-14 " +
+              (c.dark ? "bg-ink text-white hover:bg-[#1f1f1f]" : "border-[1.5px] border-ink hover:bg-[#f5f5f5]")
+            }
+          >
+            <div>
+              <div className={`${eyebrow} ${c.dark ? "text-[#9a9a9a]" : "text-mute"}`}>{c.eyebrow}</div>
+              <div className="mt-6 text-[clamp(36px,4.5vw,60px)] font-extrabold leading-[1.02] tracking-[-.04em]">
+                {c.title}
+              </div>
+              <p className={`mb-0 mt-6 max-w-[400px] text-base leading-[1.6] ${c.dark ? "text-[#b5b5b5]" : "text-body"}`}>
+                {c.desc}
+              </p>
+            </div>
+            <div className="mt-12 flex items-center justify-between gap-4 text-[15px] font-bold">
+              <span>{c.from}</span>
+              <span className="inline-flex items-center gap-2">
+                Захиалах <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <p className="mb-5 mt-16 text-base text-body">Асуух зүйл байвал чатлаарай:</p>
+      <div className="flex flex-wrap gap-3">
         <a
           href={CONTACT.instagram}
-          className="inline-flex min-h-[60px] items-center justify-center rounded-full bg-ink px-11 text-base font-bold text-white hover:bg-[#2a2a2a]"
+          className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-ink px-7 text-[15px] font-bold hover:bg-ink hover:text-white"
         >
           Instagram DM
         </a>
         <a
           href={CONTACT.facebook}
-          className="inline-flex min-h-[60px] items-center justify-center rounded-full border-[1.5px] border-ink px-11 text-base font-bold hover:bg-ink hover:text-white"
+          className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-ink px-7 text-[15px] font-bold hover:bg-ink hover:text-white"
         >
           Facebook Messenger
         </a>
       </div>
-      <p className="mb-0 mt-10 text-base text-body">
+      <p className="mb-0 mt-8 text-base text-body">
         Утас:{" "}
         {CONTACT.phones.map((p, i) => (
           <span key={p.href}>
             {i > 0 && " · "}
-            <a href={p.href} className="font-bold text-ink hover:opacity-55">
+            <a href={p.href} className="inline-flex min-h-11 items-center font-bold text-ink hover:opacity-55">
               {p.label}
             </a>
           </span>

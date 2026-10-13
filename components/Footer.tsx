@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CONTACT } from "@/lib/config";
 
 export function Footer() {
@@ -16,13 +17,13 @@ export function Footer() {
             <div className="mb-7 text-[13px] font-medium uppercase tracking-[.22em] text-[#9a9a9a]">
               Холбоо барих
             </div>
-            <div className="flex flex-col gap-3.5 text-[17px] font-medium">
+            <div className="flex flex-col items-start text-[17px] font-medium">
               {CONTACT.phones.map((p) => (
-                <a key={p.href} href={p.href} className="hover:opacity-55">
+                <a key={p.href} href={p.href} className="inline-flex min-h-11 items-center hover:opacity-55">
                   {p.label}
                 </a>
               ))}
-              <a href={`mailto:${CONTACT.email}`} className="hover:opacity-55">
+              <a href={`mailto:${CONTACT.email}`} className="inline-flex min-h-11 items-center hover:opacity-55">
                 {CONTACT.email}
               </a>
             </div>
@@ -51,7 +52,15 @@ export function Footer() {
 
         <div className="mt-[120px] flex flex-wrap justify-between gap-x-8 gap-y-3 border-t border-[#2a2a2a] pt-7 text-[13px] text-[#9a9a9a]">
           <span>Office болон агуулах байхгүй.</span>
-          <span>taply.mn · Улаанбаатар</span>
+          <div className="flex flex-wrap gap-x-6 gap-y-3">
+            <Link href="/terms" className="inline-flex min-h-11 items-center hover:text-white">
+              Үйлчилгээний нөхцөл
+            </Link>
+            <Link href="/privacy" className="inline-flex min-h-11 items-center hover:text-white">
+              Нууцлалын бодлого
+            </Link>
+            <span className="inline-flex min-h-11 items-center">taplymn.com · Улаанбаатар</span>
+          </div>
         </div>
       </div>
     </footer>

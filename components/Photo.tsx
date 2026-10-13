@@ -9,6 +9,7 @@ type Props = {
   aspect?: string; // жишээ нь "3 / 4" — height-ийн оронд, өргөнөөс хамаарч өөрчлөгдөнө
   sizes?: string; // зураг дэлгэц дээр хэр өргөн гарахыг хэлнэ — зөв хэмжээтэй файл татахад хэрэгтэй
   dark?: boolean;
+  priority?: boolean; // эхний дэлгэцэнд харагдах зураг
 };
 
 // Зураг ирээгүй үед саарал placeholder, ирсэн үед next/image
@@ -21,6 +22,7 @@ export function Photo({
   aspect,
   sizes = "(min-width:1024px) 50vw, 100vw",
   dark,
+  priority,
 }: Props) {
   return (
     <div
@@ -32,7 +34,7 @@ export function Photo({
       style={aspect ? { aspectRatio: aspect } : { height }}
     >
       {src ? (
-        <Image src={src} alt={alt} fill sizes={sizes} quality={90} className="object-cover" />
+        <Image src={src} alt={alt} fill sizes={sizes} quality={90} priority={priority} className="object-cover" />
       ) : (
         <span
           className={

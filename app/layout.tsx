@@ -10,7 +10,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://taply.mn"),
+  metadataBase: new URL("https://taplymn.com"),
   title: "TAPLY — Tap хийвэл дагана",
   description:
     "NFC карт. Утсаа картанд хүргэхэд л таны Instagram, Facebook хуудас нээгдэнэ. Улаанбаатар.",
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     title: "TAPLY — Tap хийвэл дагана",
     description:
       "Утсаа картанд хүргэхэд л таны Instagram, Facebook хуудас нээгдэнэ.",
-    url: "https://taply.mn",
+    url: "https://taplymn.com",
     siteName: "TAPLY",
     locale: "mn_MN",
     type: "website",

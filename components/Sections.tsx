@@ -329,20 +329,30 @@ export function Price() {
   );
 }
 
-const orderChoices = [
+// contact: /custom (Phase 3) бэлэн болтол доорх чатын хэсэг рүү гүйлгэнэ
+const orderChoices: {
+  href?: string;
+  eyebrow: string;
+  title: string;
+  desc: string;
+  from: string;
+  cta: string;
+  dark?: boolean;
+}[] = [
   {
     href: "/order",
     eyebrow: "Facebook · Instagram",
     title: "Энгийн карт",
     desc: "Бэлэн загвартай наалт эсвэл стенд. Линкээ оруулаад шууд төлнө.",
     from: "34,900₮-өөс",
+    cta: "Захиалах",
   },
   {
-    href: "/custom",
     eyebrow: "Таны брэнд",
     title: "Өөрийн логотой",
-    desc: "Логогоо илгээнэ. 3 загварыг үнэгүй гаргаж имэйлээр явуулна, та сонгоно.",
+    desc: "Логогоо илгээнэ үү. 3 загвар гаргаж үзүүлнэ, та сонгоно.",
     from: "44,900₮-өөс",
+    cta: "Холбогдох",
     dark: true,
   },
 ];
@@ -357,60 +367,70 @@ export function Order() {
         Аль картаа сонгоод онлайнаар захиална уу. Бусдыг нь бид хийнэ.
       </p>
       <div className="grid gap-6 md:grid-cols-2">
-        {orderChoices.map((c) => (
-          <Link
-            key={c.href}
-            href={c.href}
-            className={
-              "group flex min-h-[320px] flex-col justify-between px-6 py-10 sm:px-12 sm:py-14 " +
-              (c.dark ? "bg-ink text-white hover:bg-[#1f1f1f]" : "border-[1.5px] border-ink hover:bg-[#f5f5f5]")
-            }
-          >
-            <div>
-              <div className={`${eyebrow} ${c.dark ? "text-[#9a9a9a]" : "text-mute"}`}>{c.eyebrow}</div>
-              <div className="mt-6 text-[clamp(36px,4.5vw,60px)] font-extrabold leading-[1.02] tracking-[-.04em]">
-                {c.title}
+        {orderChoices.map((c) => {
+          const cls =
+            "group flex min-h-[320px] flex-col justify-between px-6 py-10 sm:px-12 sm:py-14 " +
+            (c.dark ? "bg-ink text-white hover:bg-[#1f1f1f]" : "border-[1.5px] border-ink hover:bg-[#f5f5f5]");
+          const body = (
+            <>
+              <div>
+                <div className={`${eyebrow} ${c.dark ? "text-[#9a9a9a]" : "text-mute"}`}>{c.eyebrow}</div>
+                <div className="mt-6 text-[clamp(36px,4.5vw,60px)] font-extrabold leading-[1.02] tracking-[-.04em]">
+                  {c.title}
+                </div>
+                <p className={`mb-0 mt-6 max-w-[400px] text-base leading-[1.6] ${c.dark ? "text-[#b5b5b5]" : "text-body"}`}>
+                  {c.desc}
+                </p>
               </div>
-              <p className={`mb-0 mt-6 max-w-[400px] text-base leading-[1.6] ${c.dark ? "text-[#b5b5b5]" : "text-body"}`}>
-                {c.desc}
-              </p>
-            </div>
-            <div className="mt-12 flex items-center justify-between gap-4 text-[15px] font-bold">
-              <span>{c.from}</span>
-              <span className="inline-flex items-center gap-2">
-                Захиалах <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
-              </span>
-            </div>
-          </Link>
-        ))}
+              <div className="mt-12 flex items-center justify-between gap-4 text-[15px] font-bold">
+                <span>{c.from}</span>
+                <span className="inline-flex items-center gap-2">
+                  {c.cta} <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                </span>
+              </div>
+            </>
+          );
+          return c.href ? (
+            <Link key={c.title} href={c.href} className={cls}>
+              {body}
+            </Link>
+          ) : (
+            <GoLink key={c.title} id="contact" className={cls}>
+              {body}
+            </GoLink>
+          );
+        })}
       </div>
 
-      <p className="mb-5 mt-16 text-base text-body">Асуух зүйл байвал чатлаарай:</p>
-      <div className="flex flex-wrap gap-3">
-        <a
-          href={CONTACT.instagram}
-          className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-ink px-7 text-[15px] font-bold hover:bg-ink hover:text-white"
-        >
-          Instagram DM
-        </a>
-        <a
-          href={CONTACT.facebook}
-          className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-ink px-7 text-[15px] font-bold hover:bg-ink hover:text-white"
-        >
-          Facebook Messenger
-        </a>
+      <div id="contact" className="max-md:scroll-mt-24">
+        <p className="mb-0 mt-16 text-lg font-bold text-ink">Логогоо илгээнэ үү, 3 загвар гаргаж үзүүлнэ.</p>
+        <p className="mb-5 mt-3 text-base text-body">Асуух зүйл байвал чатлаарай:</p>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href={CONTACT.instagram}
+            className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-ink px-7 text-[15px] font-bold hover:bg-ink hover:text-white"
+          >
+            Instagram DM
+          </a>
+          <a
+            href={CONTACT.facebook}
+            className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-ink px-7 text-[15px] font-bold hover:bg-ink hover:text-white"
+          >
+            Facebook Messenger
+          </a>
+        </div>
+        <p className="mb-0 mt-8 text-base text-body">
+          Утас:{" "}
+          {CONTACT.phones.map((p, i) => (
+            <span key={p.href}>
+              {i > 0 && " · "}
+              <a href={p.href} className="inline-flex min-h-11 items-center font-bold text-ink hover:opacity-55">
+                {p.label}
+              </a>
+            </span>
+          ))}
+        </p>
       </div>
-      <p className="mb-0 mt-8 text-base text-body">
-        Утас:{" "}
-        {CONTACT.phones.map((p, i) => (
-          <span key={p.href}>
-            {i > 0 && " · "}
-            <a href={p.href} className="inline-flex min-h-11 items-center font-bold text-ink hover:opacity-55">
-              {p.label}
-            </a>
-          </span>
-        ))}
-      </p>
     </section>
   );
 }

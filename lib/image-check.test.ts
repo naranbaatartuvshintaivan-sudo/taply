@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkLogo, LOGO_MAX_BYTES, sniffImageType } from "./image-check";
+import { checkLogo, LOGO_MAX_BYTES, LOGO_TOO_BIG, sniffImageType } from "./image-check";
 
 const enc = (s: string) => new TextEncoder().encode(s);
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
@@ -41,7 +41,7 @@ describe("checkLogo", () => {
     expect(checkLogo(new Uint8Array(), "image/png")).toMatchObject({ ok: false });
     const big = new Uint8Array(LOGO_MAX_BYTES + 1);
     big.set(PNG);
-    expect(checkLogo(big, "image/png")).toMatchObject({ ok: false, message: expect.stringContaining("4 MB") });
+    expect(checkLogo(big, "image/png")).toMatchObject({ ok: false, message: LOGO_TOO_BIG });
     const max = new Uint8Array(LOGO_MAX_BYTES);
     max.set(PNG);
     expect(checkLogo(max, "image/png")).toEqual({ ok: true, type: "image/png" });

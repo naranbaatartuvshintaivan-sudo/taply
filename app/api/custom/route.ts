@@ -1,6 +1,6 @@
 import { submitCustomRequest } from "@/lib/custom";
 import { json, supportMessage, userError } from "@/lib/http";
-import { LOGO_MAX_BYTES } from "@/lib/image-check";
+import { LOGO_MAX_BYTES, LOGO_TOO_BIG } from "@/lib/image-check";
 import { clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 // Өөрийн логотой хүсэлт (multipart/form-data). Бүх шалгалт lib/custom.ts-д.
 export async function POST(req: Request) {
   const len = Number(req.headers.get("content-length") ?? 0);
-  if (len > LOGO_MAX_BYTES + 64 * 1024) return userError(413, "Логоны файл 4 MB-аас ихгүй байх ёстой", { field: "logo" });
+  if (len > LOGO_MAX_BYTES + 64 * 1024) return userError(413, LOGO_TOO_BIG, { field: "logo" });
 
   let form: FormData;
   try {

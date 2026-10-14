@@ -71,6 +71,22 @@ describe("validateCustomRequest", () => {
     expect(r.ok && r.input.noLogo).toBe(true);
   });
 
+  it("талбар огт ирээгүй ч монгол мессеж (zod-ийн англи алдаа биш)", () => {
+    const { note: _n, ...noNote } = base;
+    void _n;
+    expect(validateCustomRequest(noNote).ok).toBe(true);
+    const r = validateCustomRequest({});
+    expect(r).toMatchObject({ ok: false, field: "name" });
+    expect(!r.ok && r.message).not.toMatch(/[A-Za-z]{4}/);
+    for (const k of ["business", "email", "qty", "district", "address"] as const) {
+      const { [k]: _drop, ...rest } = base;
+      void _drop;
+      const x = validateCustomRequest(rest);
+      expect(x).toMatchObject({ ok: false, field: k });
+      expect(!x.ok && x.message).not.toContain("Invalid input");
+    }
+  });
+
   it("honeypot бөглөгдсөн бол татгалзана", () => {
     expect(validateCustomRequest({ ...base, website: "http://spam" })).toMatchObject({ ok: false, field: "website" });
   });

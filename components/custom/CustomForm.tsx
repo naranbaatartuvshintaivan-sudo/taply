@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { CONTACT, DELIVERY } from "@/lib/config";
 import { normalizeFacebook, normalizeInstagram } from "@/lib/links";
+import { LOGO_MAX_BYTES, LOGO_TOO_BIG } from "@/lib/image-check";
 import { MAX_QTY } from "@/lib/pricing";
 import { btnLine, btnSolid, eyebrow, Field, Select, Stepper, TextArea, TextInput } from "../order/ui";
 
 // Сервер (lib/image-check.ts) бүгдийг дахин шалгана — энд зөвхөн хэрэглэгчид эрт мэдэгдэх.
-const LOGO_MAX_BYTES = 4 * 1024 * 1024;
 const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const OTHER = "__other";
 
@@ -43,7 +43,7 @@ export function CustomForm() {
     if (!file) return setLogo(null);
     if (file.type === "image/svg+xml") return setErrors((p) => ({ ...p, logo: "SVG файл хүлээж авахгүй. PNG, JPG эсвэл WEBP илгээнэ үү" }));
     if (!LOGO_TYPES.includes(file.type)) return setErrors((p) => ({ ...p, logo: "Логоны файл PNG, JPG эсвэл WEBP байх ёстой" }));
-    if (file.size > LOGO_MAX_BYTES) return setErrors((p) => ({ ...p, logo: "Логоны файл 4 MB-аас ихгүй байх ёстой" }));
+    if (file.size > LOGO_MAX_BYTES) return setErrors((p) => ({ ...p, logo: LOGO_TOO_BIG }));
     setLogo(file);
   }
 

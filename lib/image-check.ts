@@ -6,6 +6,7 @@ export type LogoType = "image/png" | "image/jpeg" | "image/webp";
 // Vercel serverless функцийн хүсэлтийн body дээд тал нь 4.5 MB тул form-ын бусад талбартай
 // хамт багтаахаар 4 MB. (logos bucket өөрөө 5 MB хүлээн авна.)
 export const LOGO_MAX_BYTES = 4 * 1024 * 1024;
+export const LOGO_TOO_BIG = "Логоны хэмжээ 4 MB-аас бага байх ёстой. Зургаа жижигрүүлээд дахин оролдоно уу";
 
 export const LOGO_EXT: Record<LogoType, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
 
@@ -25,7 +26,7 @@ export type LogoCheck = { ok: true; type: LogoType } | { ok: false; message: str
 /** Хэмжээ, төрлийг шалгаад хэрэглэгчид ойлгомжтой монгол алдаа буцаана. */
 export function checkLogo(bytes: Uint8Array, declaredType: string): LogoCheck {
   if (bytes.length === 0) return { ok: false, message: "Логоны файл хоосон байна" };
-  if (bytes.length > LOGO_MAX_BYTES) return { ok: false, message: "Логоны файл 4 MB-аас ихгүй байх ёстой" };
+  if (bytes.length > LOGO_MAX_BYTES) return { ok: false, message: LOGO_TOO_BIG };
   if (declaredType === "image/svg+xml" || looksLikeSvg(bytes)) {
     return { ok: false, message: "SVG файл хүлээж авахгүй. PNG, JPG эсвэл WEBP илгээнэ үү" };
   }

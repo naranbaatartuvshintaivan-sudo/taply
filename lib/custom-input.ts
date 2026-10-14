@@ -46,9 +46,14 @@ export type CustomRequestInput = {
 
 export type Invalid = { ok: false; field: string; message: string };
 
+const TEXT_FIELDS = ["business", "name", "phone", "email", "fb", "ig", "qty", "district", "address", "note"] as const;
+
 /** FormData-аас (лого файлаас бусад) талбаруудыг шалгана. */
 export function validateCustomRequest(raw: Record<string, unknown>): { ok: true; input: CustomRequestInput } | Invalid {
-  const parsed = customRequestSchema.safeParse(raw);
+  // Дутуу талбарыг хоосон гэж үзнэ — zod-ийн англи "expected string" биш, монгол мессеж гарна
+  const filled: Record<string, unknown> = { ...raw };
+  for (const k of TEXT_FIELDS) if (filled[k] === undefined || filled[k] === null) filled[k] = "";
+  const parsed = customRequestSchema.safeParse(filled);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     return { ok: false, field: String(issue.path[0] ?? ""), message: issue.message };

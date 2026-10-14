@@ -222,3 +222,8 @@ export const db: Db = {
     ) as Order[];
   },
 };
+
+/** /api/health — service role-оор orders хүснэгтэд хандаж чадаж байгаа эсэх. */
+export async function pingDb(): Promise<void> {
+  must(await sb().from("orders").select("id").limit(1), "ping");
+}

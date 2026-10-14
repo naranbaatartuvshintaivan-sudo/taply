@@ -115,3 +115,8 @@ export function cancelPaymentIntent(id: string) {
 
 // Төлөгдөх боломжгүй болсон (эцсийн) төлөв
 export const isFinal = (s: PaymentIntentStatus) => s === "succeeded" || s === "canceled";
+
+/** /api/health — Wire key хүчинтэй эсэх (юу ч үүсгэхгүй). */
+export async function pingWire(): Promise<void> {
+  await call<unknown>("GET", "/webhook_endpoints");
+}

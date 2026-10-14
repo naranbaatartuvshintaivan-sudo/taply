@@ -54,3 +54,19 @@ export function emailLayout(title: string, rows: [string, string][], footer: str
 <p style="font-size:14px;line-height:1.7;color:#4a4a4a;margin:28px 0 0">${footer}</p>
 </div></body></html>`;
 }
+
+/** /api/health — Resend key хүчинтэй эсэх (имэйл илгээхгүй).
+ *  Зөвхөн "sending access" эрхтэй key GET /domains-д restricted_api_key буцаадаг — энэ нь key хүчинтэйг харуулна. */
+export async function pingResend(): Promise<void> {
+  const { RESEND_API_KEY } = env();
+  if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY тохируулаагүй");
+  const res = await fetch("https://api.resend.com/domains", {
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (res.ok) return;
+  const body = (await res.json().catch(() => null)) as { name?: string } | null;
+  if (res.status === 401 && body?.name === "restricted_api_key") return;
+  throw new Error(`Resend ${res.status}: ${body?.name ?? ""}`.trim());
+}

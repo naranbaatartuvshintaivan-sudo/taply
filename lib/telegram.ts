@@ -34,3 +34,8 @@ export function sendTelegram(html: string, opts: { buttonText?: string; buttonUr
       : {}),
   });
 }
+
+/** /api/health — token хүчинтэй, bot TELEGRAM_CHAT_ID-д хандаж чадаж байгаа эсэх (мессеж илгээхгүй). */
+export function pingTelegram() {
+  return tg("getChat", {});
+}

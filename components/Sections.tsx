@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CONTACT, PRICE_CARDS, SHOW_PRICES } from "@/lib/config";
+import { CUSTOMERS, customerAlt, distribute, type Customer } from "@/lib/customers";
 import { PRODUCTS } from "@/lib/products";
 import { GoLink } from "./PageTransition";
 import { Photo } from "./Photo";
@@ -105,22 +107,53 @@ const forms = [
   { name: "Custom", size: "Таны загвараар", desc: "Өөрийн лого, QR, монгол бичвэртэй. Загвар гаргах нь үнэгүй." },
 ];
 
-const clients: { src: string; name: string | null; alt: string; className: string; sizes: string }[] = [
-  {
-    src: "/customers/style-brand-store.webp",
-    name: "Style Brand Store",
-    alt: "Style Brand Store-ийн NFC стенд",
-    className: "md:col-span-7",
-    sizes: "(min-width:1360px) 730px, (min-width:768px) 56vw, 100vw",
-  },
-  {
-    src: "/customers/maral.webp",
-    name: "Maral",
-    alt: "Maral-ийн NFC стенд",
-    className: "md:col-span-4 md:col-start-9 md:mt-[240px]",
-    sizes: "(min-width:1360px) 410px, (min-width:768px) 32vw, 100vw",
-  },
-];
+// Баганы өргөн: 1360px wrap − 96px padding, 24px зай → 3 багана ≈ 405px; утсан дээр 2 багана
+const CLIENT_SIZES = "(min-width:1360px) 410px, (min-width:768px) 31vw, 50vw";
+const SPEEDS = [70, 90, 110]; // сек — багана бүр өөр хурдтай
+
+function ClientItem({ c, hidden }: { c: Customer; hidden: boolean }) {
+  return (
+    <li className="pb-6">
+      <Image
+        src={c.src}
+        alt={hidden ? "" : customerAlt(c)}
+        width={c.width}
+        height={c.height}
+        sizes={CLIENT_SIZES}
+        className="block h-auto w-full"
+      />
+      {c.name && <p className="mb-0 mt-3 text-[13px] text-mute">{c.name}</p>}
+    </li>
+  );
+}
+
+// Нэг зураг хуудсан дээр хэд хэд гарна — эхний удаагийнх нь л screen reader-т, бусад нь aria-hidden
+function Marquee({ cols, className }: { cols: Customer[][]; className: string }) {
+  const seen = new Set<string>();
+  const first = (c: Customer) => (seen.has(c.src) ? false : (seen.add(c.src), true));
+  return (
+    <div className={`h-full gap-6 ${className}`}>
+      {cols.map((col, i) => (
+        <div
+          key={i}
+          className="will-change-transform"
+          style={{ animation: `marquee-down ${SPEEDS[i % SPEEDS.length]}s linear infinite` }}
+        >
+          <ul className="m-0 list-none p-0">
+            {col.map((c, j) => (
+              <ClientItem key={j} c={c} hidden={!first(c)} />
+            ))}
+          </ul>
+          <ul aria-hidden className="m-0 list-none p-0">
+            {col.map((c, j) => (
+              <ClientItem key={j} c={c} hidden />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Clients() {
   return (
@@ -129,14 +162,23 @@ export function Clients() {
       <p className="mb-[120px] mt-8 max-w-[520px] text-xl leading-[1.55] text-[#2a2a2a]">
         Эдгээр газарт TAPLY аль хэдийн ажиллаж байна.
       </p>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-16 md:grid-cols-12">
-        {clients.map((c, i) => (
-          <figure key={c.src} className={`m-0 ${c.className}`}>
-            <Photo n={i + 1} label="" src={c.src} alt={c.alt} aspect="3 / 4" sizes={c.sizes} />
-            {c.name && <figcaption className="mt-4 text-[13px] text-mute">{c.name}</figcaption>}
-          </figure>
-        ))}
+      {/* Дээрээс доош урсдаг баганууд. Дээд, доод ирмэг mask-ээр бүдгэрнэ. */}
+      <div
+        className="h-[min(80vh,880px)] overflow-hidden motion-reduce:hidden"
+        style={{
+          maskImage: "linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent)",
+        }}
+      >
+        <Marquee cols={distribute(CUSTOMERS, 2)} className="grid grid-cols-2 md:hidden" />
+        <Marquee cols={distribute(CUSTOMERS, 3)} className="hidden grid-cols-3 md:grid" />
       </div>
+      {/* prefers-reduced-motion: хөдөлгөөнгүй энгийн grid, зураг бүр нэг удаа */}
+      <ul className="m-0 hidden list-none grid-cols-2 items-start gap-6 p-0 motion-reduce:grid md:grid-cols-3">
+        {CUSTOMERS.map((c) => (
+          <ClientItem key={c.src} c={c} hidden={false} />
+        ))}
+      </ul>
     </section>
   );
 }

@@ -3,7 +3,7 @@
 //
 // - EXIF orientation-ыг пикселд шингээж эргүүлнэ (.rotate())
 // - EXIF/GPS/ICC зэрэг бүх metadata-г хасна (sharp анхдагчаар хуулахгүй)
-// - Урт тал нь 1600px, WebP 80 чанар, ~300 KB-аас хэтэрвэл чанарыг бууруулна
+// - Урт тал нь 1600px, WebP 82 чанар, ~300 KB-аас хэтэрвэл чанарыг бууруулна
 import sharp from "sharp";
 import { statSync } from "node:fs";
 
@@ -18,7 +18,7 @@ if (args.length === 0 || args.length % 2 !== 0) {
 for (let i = 0; i < args.length; i += 2) {
   const [src, out] = [args[i], args[i + 1]];
   if (!out.endsWith(".webp")) throw new Error(`${out}: .webp байх ёстой`);
-  let quality = 80;
+  let quality = 82;
   for (;;) {
     await sharp(src)
       .rotate()

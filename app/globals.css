@@ -28,3 +28,13 @@ body {
     scroll-behavior: auto;
   }
 }
+
+/* "Манай хэрэглэгчид" — багана бүрийн агуулга 2 давтагддаг тул -50% → 0 нь саадгүй давталт */
+@keyframes marquee-down {
+  from {
+    transform: translateY(-50%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

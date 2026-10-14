@@ -1,7 +1,7 @@
 import { Footer } from "@/components/Footer";
 import { Nav } from "@/components/Nav";
 import { TransitionProvider } from "@/components/PageTransition";
-import { Hero, How, Offer, Order, Price, Products } from "@/components/Sections";
+import { Clients, Hero, How, Offer, Order, Price, Products } from "@/components/Sections";
 import { SHOW_PRICES, TRANSITION_ORIGIN } from "@/lib/config";
 
 export default function Home() {
@@ -14,6 +14,7 @@ export default function Home() {
         <Offer />
         <Products />
         {SHOW_PRICES && <Price />}
+        <Clients />
         <Order />
         <Footer />
       </main>

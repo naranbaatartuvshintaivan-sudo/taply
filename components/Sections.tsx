@@ -83,29 +83,66 @@ export function How() {
           </div>
         ))}
       </div>
-      <div className="mt-24 grid gap-6 md:grid-cols-2">
-        <figure className="m-0">
-          <Photo
-            n={3}
-            label="Facebook наалт"
-            src="/products/fb-sticker.png"
-            alt="100×100 мм хэмжээтэй Facebook NFC наалт"
-            aspect="1 / 1"
-            sizes={HALF}
-          />
-          <figcaption className="mt-4 text-[13px] text-mute">Наалт · 100 × 100 мм</figcaption>
-        </figure>
-        <figure className="m-0">
-          <Photo
-            n={4}
-            label="Instagram наалт"
-            src="/products/ig-sticker.png"
-            alt="Ширээн дээр тавьсан Instagram NFC наалт"
-            aspect="1 / 1"
-            sizes={HALF}
-          />
-          <figcaption className="mt-4 text-[13px] text-mute">Ширээн дээр тавьсан байдал</figcaption>
-        </figure>
+      <ul aria-label="Хэлбэрүүд" className="m-0 mt-[160px] list-none border-b border-line p-0">
+        {forms.map((f) => (
+          <li
+            key={f.name}
+            className="grid gap-x-12 gap-y-3 border-t border-line py-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)] md:items-baseline"
+          >
+            <span className="text-[clamp(28px,3vw,40px)] font-bold leading-none tracking-[-.03em]">{f.name}</span>
+            <span className="text-[15px] font-medium text-mute">{f.size}</span>
+            <span className="text-base leading-[1.65] text-body">{f.desc}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+const forms = [
+  { name: "Наалт", size: "100 × 100 мм", desc: "Касс, ширээ, лангуун дээр наана. Утсаа хүргэхэд хуудас нээгдэнэ." },
+  { name: "Стенд", size: "Ширээний босоо стенд", desc: "Ширээн дээр өөрөө зогсоно. NFC болон QR код хоёулаа бий." },
+  { name: "Custom", size: "Таны загвараар", desc: "Өөрийн лого, QR, монгол бичвэртэй. Загвар гаргах нь үнэгүй." },
+];
+
+const clients: { src: string; name: string | null; alt: string; className: string; sizes: string }[] = [
+  {
+    src: "/customers/style-brand-store.webp",
+    name: "Style Brand Store",
+    alt: "Style Brand Store-ийн NFC стенд",
+    className: "md:col-span-7",
+    sizes: "(min-width:1360px) 730px, (min-width:768px) 56vw, 100vw",
+  },
+  {
+    src: "/customers/maral.webp",
+    name: "Maral",
+    alt: "Maral-ийн NFC стенд",
+    className: "md:col-span-4 md:col-start-9 md:mt-[240px]",
+    sizes: "(min-width:1360px) 410px, (min-width:768px) 32vw, 100vw",
+  },
+  {
+    src: "/customers/desk-sticker.webp",
+    name: null,
+    alt: "Ширээн дээр наасан Facebook NFC наалт",
+    className: "md:col-span-5 md:col-start-3 md:mt-[120px]",
+    sizes: "(min-width:1360px) 520px, (min-width:768px) 40vw, 100vw",
+  },
+];
+
+export function Clients() {
+  return (
+    <section id="clients" className={`${wrap} pt-[240px]`}>
+      <h2 className={`${h2} m-0`}>Манай хэрэглэгчид</h2>
+      <p className="mb-[120px] mt-8 max-w-[520px] text-xl leading-[1.55] text-[#2a2a2a]">
+        Эдгээр газарт TAPLY аль хэдийн ажиллаж байна.
+      </p>
+      <div className="grid grid-cols-1 gap-x-6 gap-y-16 md:grid-cols-12">
+        {clients.map((c, i) => (
+          <figure key={c.src} className={`m-0 ${c.className}`}>
+            <Photo n={i + 1} label="" src={c.src} alt={c.alt} aspect="3 / 4" sizes={c.sizes} />
+            {c.name && <figcaption className="mt-4 text-[13px] text-mute">{c.name}</figcaption>}
+          </figure>
+        ))}
       </div>
     </section>
   );

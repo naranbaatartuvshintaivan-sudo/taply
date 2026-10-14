@@ -6,3 +6,7 @@ out
 next-env.d.ts
 *.tsbuildinfo
 *.zip
+
+# Харилцагчдын эх зургууд (2–3 MB) — зөвхөн scripts/prepare-photos.ts-ээр бэлтгэсэн .webp-г commit хийнэ
+public/customers/*
+!public/customers/*.webp

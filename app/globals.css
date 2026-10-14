@@ -29,12 +29,25 @@ body {
   }
 }
 
-/* "Манай хэрэглэгчид" — багана бүрийн агуулга 2 давтагддаг тул -50% → 0 нь саадгүй давталт */
-@keyframes marquee-down {
+/* "Манай хэрэглэгчид" — багана бүрийн агуулга 2 давтагддаг тул 0 → -50% нь саадгүй давталт.
+   Сондгой багана эсрэг чиглэлд (reverse). Hover дээр зогсоно. */
+@keyframes marquee-up {
   from {
-    transform: translateY(-50%);
-  }
-  to {
     transform: translateY(0);
   }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.marquee-col {
+  animation: marquee-up var(--marquee-duration, 50s) linear infinite;
+}
+
+.marquee-col:nth-child(even) {
+  animation-direction: reverse;
+}
+
+.marquee:hover .marquee-col {
+  animation-play-state: paused;
 }

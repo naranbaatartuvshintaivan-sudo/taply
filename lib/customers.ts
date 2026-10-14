@@ -1,14 +1,21 @@
-// "Манай хэрэглэгчид" урсгалын зургууд (public/customers/*.webp, scripts/prepare-photos.ts-ээр бэлтгэсэн).
-// Шинэ зураг нэмэхдээ width/height-ийг скриптийн гаралтаас хуулна. Нэр мэдэгдэхгүй бол name: null —
-// caption бичихгүй, нэр зохиохгүй. Нэртэй нь жагсаалтын эхэнд байна (урсгалын эхэнд гарна).
-export type Customer = { src: string; name: string | null; width: number; height: number };
+// "Манай хэрэглэгчид" урсгалын зургууд (public/customers/*.webp, scripts/prep-customers.mjs-ээр бэлтгэсэн).
+// Нэр мэдэгдэхгүй бол name: null — caption бичихгүй, нэр зохиохгүй. Нэртэй нь эхэнд (урсгалын эхэнд гарна).
+export type Customer = { src: string; name: string | null };
+
+const named = (file: string, name: string): Customer => ({ src: `/customers/${file}.webp`, name });
+const unnamed = (file: string): Customer => ({ src: `/customers/${file}.webp`, name: null });
 
 export const CUSTOMERS: Customer[] = [
-  { src: "/customers/style-brand-store.webp", name: "Style Brand Store", width: 1200, height: 1600 },
-  { src: "/customers/maral.webp", name: "Maral", width: 1200, height: 1600 },
-  { src: "/customers/bolor-store.webp", name: "BOLOR Store", width: 1200, height: 1600 },
-  { src: "/customers/manduul-1.webp", name: null, width: 1200, height: 1600 },
-  { src: "/customers/manduul-2.webp", name: null, width: 1200, height: 1600 },
+  named("style-brand-store_custom", "Style Brand Store"),
+  named("maral_custom", "Maral"),
+  named("bolor-store_custom", "BOLOR Store"),
+  unnamed("unnamed-01_shoe-store-fb-ig"),
+  unnamed("unnamed-02_shoe-store-fb"),
+  unnamed("unnamed-03_clothing-boutique-fb"),
+  unnamed("unnamed-04_marble-table-fb-ig"),
+  unnamed("unnamed-05_white-counter-fb"),
+  unnamed("unnamed-06_concrete-counter-fb-ig"),
+  unnamed("unnamed-07_dark-desk-fb"),
 ];
 
 export const customerAlt = (c: Customer) => (c.name ? `${c.name}-ийн NFC стенд` : "Харилцагчийн NFC стенд");
@@ -18,7 +25,7 @@ export const customerAlt = (c: Customer) => (c.name ? `${c.name}-ийн NFC ст
  * (эргүүлж) тавина — хоосон багана гарахгүй. Олон бол ээлжлэн хуваана.
  * Багана бүр урсгалын нэг "хагас"-ыг дүүргэхийн тулд дор хаяж `minPerCol` зурагтай болтол давтагдана.
  */
-export function distribute<T>(items: T[], cols: number, minPerCol = 6): T[][] {
+export function distribute<T>(items: T[], cols: number, minPerCol = 4): T[][] {
   if (items.length === 0) return Array.from({ length: cols }, () => []);
   const base =
     items.length >= cols * 2

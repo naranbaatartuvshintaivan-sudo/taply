@@ -109,20 +109,19 @@ const forms = [
 
 // Баганы өргөн: 1360px wrap − 96px padding, 24px зай → 3 багана ≈ 405px; утсан дээр 2 багана
 const CLIENT_SIZES = "(min-width:1360px) 410px, (min-width:768px) 31vw, 50vw";
-const SPEEDS = [70, 90, 110]; // сек — багана бүр өөр хурдтай
+const SPEEDS = [48, 56, 44]; // сек — багана бүр өөр хурдтай, тэгш багана эсрэг чиглэлд (globals.css)
 
 function ClientItem({ c, hidden }: { c: Customer; hidden: boolean }) {
   return (
     <li className="pb-6">
-      <Image
-        src={c.src}
-        alt={hidden ? "" : customerAlt(c)}
-        width={c.width}
-        height={c.height}
-        sizes={CLIENT_SIZES}
-        className="block h-auto w-full"
-      />
-      {c.name && <p className="mb-0 mt-3 text-[13px] text-mute">{c.name}</p>}
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[6px] bg-ph shadow-[0_8px_24px_rgba(0,0,0,.08)]">
+        <Image src={c.src} alt={hidden ? "" : customerAlt(c)} fill sizes={CLIENT_SIZES} className="object-cover" />
+        {c.name && (
+          <p className="absolute inset-x-0 bottom-0 m-0 bg-gradient-to-t from-black/60 to-transparent px-4 pb-3 pt-10 text-[13px] font-medium text-white">
+            {c.name}
+          </p>
+        )}
+      </div>
     </li>
   );
 }
@@ -136,8 +135,8 @@ function Marquee({ cols, className }: { cols: Customer[][]; className: string })
       {cols.map((col, i) => (
         <div
           key={i}
-          className="will-change-transform"
-          style={{ animation: `marquee-down ${SPEEDS[i % SPEEDS.length]}s linear infinite` }}
+          className="marquee-col will-change-transform"
+          style={{ "--marquee-duration": `${SPEEDS[i % SPEEDS.length]}s` } as React.CSSProperties}
         >
           <ul className="m-0 list-none p-0">
             {col.map((c, j) => (
@@ -162,9 +161,9 @@ export function Clients() {
       <p className="mb-[120px] mt-8 max-w-[520px] text-xl leading-[1.55] text-[#2a2a2a]">
         Эдгээр газарт TAPLY аль хэдийн ажиллаж байна.
       </p>
-      {/* Дээрээс доош урсдаг баганууд. Дээд, доод ирмэг mask-ээр бүдгэрнэ. */}
+      {/* Тасралтгүй гүйдэг баганууд. Дээд, доод ирмэг mask-ээр бүдгэрнэ. */}
       <div
-        className="h-[min(80vh,880px)] overflow-hidden motion-reduce:hidden"
+        className="marquee h-[680px] overflow-hidden motion-reduce:hidden"
         style={{
           maskImage: "linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent)",
           WebkitMaskImage: "linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent)",
@@ -174,7 +173,7 @@ export function Clients() {
         <Marquee cols={distribute(CUSTOMERS, 3)} className="hidden grid-cols-3 md:grid" />
       </div>
       {/* prefers-reduced-motion: хөдөлгөөнгүй энгийн grid, зураг бүр нэг удаа */}
-      <ul className="m-0 hidden list-none grid-cols-2 items-start gap-6 p-0 motion-reduce:grid md:grid-cols-3">
+      <ul className="m-0 hidden list-none grid-cols-2 gap-x-6 p-0 motion-reduce:grid md:grid-cols-3">
         {CUSTOMERS.map((c) => (
           <ClientItem key={c.src} c={c} hidden={false} />
         ))}

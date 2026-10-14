@@ -32,7 +32,7 @@ describe("distribute", () => {
 
 describe("customerAlt", () => {
   it("нэртэй / нэргүй", () => {
-    expect(customerAlt({ src: "", name: "Maral", width: 1, height: 1 })).toBe("Maral-ийн NFC стенд");
-    expect(customerAlt({ src: "", name: null, width: 1, height: 1 })).toBe("Харилцагчийн NFC стенд");
+    expect(customerAlt({ src: "", name: "Maral" })).toBe("Maral-ийн NFC стенд");
+    expect(customerAlt({ src: "", name: null })).toBe("Харилцагчийн NFC стенд");
   });
 });

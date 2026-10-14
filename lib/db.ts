@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { env } from "./env";
 
 // Supabase — зөвхөн сервер, service role. Client талд key огт байхгүй.
+// sb() нь lib/custom-db.ts-д ч ашиглагдана.
 
 export type OrderStatus = "pending_payment" | "paid" | "expired" | "canceled" | "in_production" | "delivered";
 
@@ -86,7 +87,7 @@ export interface Db {
 }
 
 let client: SupabaseClient | null = null;
-function sb(): SupabaseClient {
+export function sb(): SupabaseClient {
   if (!client) {
     const e = env();
     client = createClient(e.SUPABASE_URL, e.SUPABASE_SERVICE_ROLE_KEY, {

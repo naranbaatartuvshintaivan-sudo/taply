@@ -370,9 +370,8 @@ export function Price() {
   );
 }
 
-// contact: /custom (Phase 3) бэлэн болтол доорх чатын хэсэг рүү гүйлгэнэ
 const orderChoices: {
-  href?: string;
+  href: string;
   eyebrow: string;
   title: string;
   desc: string;
@@ -389,11 +388,12 @@ const orderChoices: {
     cta: "Захиалах",
   },
   {
+    href: "/custom",
     eyebrow: "Таны брэнд",
     title: "Өөрийн логотой",
     desc: "Логогоо илгээнэ үү. 3 загвар гаргаж үзүүлнэ, та сонгоно.",
     from: "44,900₮-өөс",
-    cta: "Холбогдох",
+    cta: "Захиалах",
     dark: true,
   },
 ];
@@ -431,14 +431,10 @@ export function Order() {
               </div>
             </>
           );
-          return c.href ? (
-            <Link key={c.title} href={c.href} className={cls}>
+          return (
+            <Link key={c.href} href={c.href} className={cls}>
               {body}
             </Link>
-          ) : (
-            <GoLink key={c.title} id="contact" className={cls}>
-              {body}
-            </GoLink>
           );
         })}
       </div>

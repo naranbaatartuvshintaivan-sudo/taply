@@ -8,10 +8,10 @@ import { fmt, MAX_QTY, quote, SKU_PLATFORM, STANDARD_SKUS, type StandardSku } fr
 import { btnLine, btnSolid, eyebrow, Field, Select, Stepper, StepNav, SummaryRow, TextArea, TextInput } from "./ui";
 
 const PRODUCTS: { sku: StandardSku; name: string; kind: string; src: string; alt: string }[] = [
-  { sku: "fb_sticker", name: "Facebook наалт", kind: "Хэвтээ наалт · 100 × 100 мм", src: "/products/fb-sticker.png", alt: "Facebook NFC наалт" },
-  { sku: "ig_sticker", name: "Instagram наалт", kind: "Хэвтээ наалт · 100 × 100 мм", src: "/products/ig-sticker.png", alt: "Instagram NFC наалт" },
-  { sku: "fb_stand", name: "Facebook стенд", kind: "Ширээний босоо стенд", src: "/products/fb-stand.png", alt: "Facebook NFC стенд" },
-  { sku: "ig_stand", name: "Instagram стенд", kind: "Ширээний босоо стенд", src: "/products/ig-stand.png", alt: "Instagram NFC стенд" },
+  { sku: "fb_sticker", name: "Facebook наалт", kind: "Хэвтээ наалт · 100 × 100 мм", src: "/products/hevteifb.webp", alt: "Facebook хуудас руу холбодог 100 × 100 мм NFC наалт" },
+  { sku: "ig_sticker", name: "Instagram наалт", kind: "Хэвтээ наалт · 100 × 100 мм", src: "/products/hevtei.webp", alt: "Instagram хуудас руу холбодог 100 × 100 мм NFC наалт" },
+  { sku: "fb_stand", name: "Facebook стенд", kind: "Ширээний босоо стенд", src: "/products/bosoofb.webp", alt: "Facebook хуудас руу холбодог ширээний NFC стенд" },
+  { sku: "ig_stand", name: "Instagram стенд", kind: "Ширээний босоо стенд", src: "/products/bosooig.webp", alt: "Instagram хуудас руу холбодог ширээний NFC стенд" },
 ];
 
 const STEPS = ["Бүтээгдэхүүн", "Линк", "Хүргэлт", "Төлөх"];

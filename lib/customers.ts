@@ -7,6 +7,8 @@ export const CUSTOMERS: Customer[] = [
   { src: "/customers/style-brand-store.webp", name: "Style Brand Store", width: 1200, height: 1600 },
   { src: "/customers/maral.webp", name: "Maral", width: 1200, height: 1600 },
   { src: "/customers/bolor-store.webp", name: "BOLOR Store", width: 1200, height: 1600 },
+  { src: "/customers/manduul-1.webp", name: null, width: 1200, height: 1600 },
+  { src: "/customers/manduul-2.webp", name: null, width: 1200, height: 1600 },
 ];
 
 export const customerAlt = (c: Customer) => (c.name ? `${c.name}-ийн NFC стенд` : "Харилцагчийн NFC стенд");

@@ -120,13 +120,6 @@ const clients: { src: string; name: string | null; alt: string; className: strin
     className: "md:col-span-4 md:col-start-9 md:mt-[240px]",
     sizes: "(min-width:1360px) 410px, (min-width:768px) 32vw, 100vw",
   },
-  {
-    src: "/customers/desk-sticker.webp",
-    name: null,
-    alt: "Ширээн дээр наасан Facebook NFC наалт",
-    className: "md:col-span-5 md:col-start-3 md:mt-[120px]",
-    sizes: "(min-width:1360px) 520px, (min-width:768px) 40vw, 100vw",
-  },
 ];
 
 export function Clients() {

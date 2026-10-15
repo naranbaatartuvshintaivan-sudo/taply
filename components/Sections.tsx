@@ -373,6 +373,8 @@ export function Price() {
 // contact: /custom (Phase 3) бэлэн болтол доорх чатын хэсэг рүү гүйлгэнэ
 const orderChoices: {
   href?: string;
+  /** Гадаад холбоос — шинэ tab-д нээгдэнэ */
+  external?: string;
   eyebrow: string;
   title: string;
   desc: string;
@@ -389,11 +391,13 @@ const orderChoices: {
     cta: "Захиалах",
   },
   {
+    // Custom захиалгыг Facebook Messenger-ээр гараар зохицуулна — сайтын Facebook хуудас (шинэ tab)
+    external: CONTACT.facebook,
     eyebrow: "Таны брэнд",
     title: "Өөрийн логотой",
-    desc: "Логогоо илгээнэ үү. 3 загвар гаргаж үзүүлнэ, та сонгоно.",
+    desc: "Логогоо Messenger-ээр илгээнэ үү. 3 загвар гаргаж үзүүлнэ, та сонгоно.",
     from: "44,900₮-өөс",
-    cta: "Холбогдох",
+    cta: "Messenger-ээр бичих",
     dark: true,
   },
 ];
@@ -431,6 +435,13 @@ export function Order() {
               </div>
             </>
           );
+          if (c.external) {
+            return (
+              <a key={c.title} href={c.external} target="_blank" rel="noopener noreferrer" className={cls}>
+                {body}
+              </a>
+            );
+          }
           return c.href ? (
             <Link key={c.title} href={c.href} className={cls}>
               {body}

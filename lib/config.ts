@@ -14,6 +14,14 @@ export const CONTACT = {
   email: "officaltyply@gmail.com",
 };
 
+// Messenger шууд: CONTACT.facebook-ийн profile.php?id=<id> → https://m.me/<id> (шинэ id зохиохгүй)
+export function messengerUrl(facebook: string): string {
+  const id = new URL(facebook).searchParams.get("id");
+  if (!id || !/^\d+$/.test(id)) throw new Error("CONTACT.facebook-д profile.php?id= байхгүй");
+  return `https://m.me/${id}`;
+}
+export const MESSENGER_URL = messengerUrl(CONTACT.facebook);
+
 export type PriceRow = { label: string; value: string };
 export type PriceCard = {
   name: string;

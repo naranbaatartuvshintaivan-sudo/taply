@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CONTACT, PRICE_CARDS, SHOW_PRICES } from "@/lib/config";
+import { CONTACT, MESSENGER_URL, PRICE_CARDS, SHOW_PRICES } from "@/lib/config";
 import { CUSTOMERS, customerAlt, distribute, type Customer } from "@/lib/customers";
 import { PRODUCTS } from "@/lib/products";
 import { GoLink } from "./PageTransition";
@@ -391,8 +391,8 @@ const orderChoices: {
     cta: "Захиалах",
   },
   {
-    // Custom захиалгыг Facebook Messenger-ээр гараар зохицуулна — сайтын Facebook хуудас (шинэ tab)
-    external: CONTACT.facebook,
+    // Custom захиалгыг Facebook Messenger-ээр гараар зохицуулна — Messenger шууд (шинэ tab)
+    external: MESSENGER_URL,
     eyebrow: "Таны брэнд",
     title: "Өөрийн логотой",
     desc: "Логогоо Messenger-ээр илгээнэ үү. 3 загвар гаргаж үзүүлнэ, та сонгоно.",

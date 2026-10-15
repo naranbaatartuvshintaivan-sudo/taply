@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkLimits, clientIp, CUSTOM_LIMITS, hashKey } from "./rate-limit";
+import { checkLimits, clientIp, CUSTOM_LIMITS, hashKey, normalizeEmailKey } from "./rate-limit";
 
 // Postgres-ийн hit_rate_limit-ийг санах ойд дуурайна (цонх үргэлж идэвхтэй гэж үзнэ)
 function fakeHit() {
@@ -57,5 +57,21 @@ describe("rate limit", () => {
     expect(clientIp(new Headers({ "x-real-ip": "9.9.9.9", "x-forwarded-for": "1.1.1.1" }))).toBe("9.9.9.9");
     expect(clientIp(new Headers({ "x-forwarded-for": "1.1.1.1, 2.2.2.2" }))).toBe("1.1.1.1");
     expect(clientIp(new Headers())).toBe("unknown");
+  });
+});
+
+describe("normalizeEmailKey (custom_email түлхүүр)", () => {
+  it("lowercase + trim", () => {
+    expect(normalizeEmailKey("  Bat@Example.MN ")).toBe("bat@example.mn");
+  });
+  it("gmail / googlemail: +tag хасна, нэг түлхүүр", () => {
+    expect(normalizeEmailKey("officaltyply+shat3@gmail.com")).toBe("officaltyply@gmail.com");
+    expect(normalizeEmailKey("OfficalTyply+A+B@GMAIL.com")).toBe("officaltyply@gmail.com");
+    expect(normalizeEmailKey("officaltyply+x@googlemail.com")).toBe("officaltyply@gmail.com");
+    const h = (e: string) => hashKey("s", CUSTOM_LIMITS.email.bucket, normalizeEmailKey(e));
+    expect(h("officaltyply+1@gmail.com")).toBe(h("officaltyply@gmail.com"));
+  });
+  it("бусад домэйнд +tag хэвээр (өөр inbox байж болно)", () => {
+    expect(normalizeEmailKey("bat+shop@example.mn")).toBe("bat+shop@example.mn");
   });
 });

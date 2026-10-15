@@ -13,6 +13,21 @@ export const CUSTOM_LIMITS = {
   email: { bucket: "custom_email", limit: 3, window: "1 day" },
 } as const satisfies Record<string, RateRule>;
 
+/**
+ * Имэйлийн rate limit түлхүүр: жижиг үсэг, @gmail.com (googlemail.com) бол "+tag"-ийг хасна —
+ * a+1@gmail.com, a+2@gmail.com нэг inbox тул нэг хязгаарт тоологдоно. Зөвхөн түлхүүрт;
+ * имэйл илгээх хаяг хэвээр.
+ */
+export function normalizeEmailKey(email: string): string {
+  const e = email.trim().toLowerCase();
+  const at = e.lastIndexOf("@");
+  if (at < 1) return e;
+  const local = e.slice(0, at);
+  const domain = e.slice(at + 1);
+  if (domain !== "gmail.com" && domain !== "googlemail.com") return e;
+  return `${local.split("+")[0]}@gmail.com`;
+}
+
 /** Vercel нь жинхэнэ client IP-г x-real-ip / x-forwarded-for-ийн эхэнд тавьдаг. */
 export function clientIp(headers: Headers): string {
   const real = headers.get("x-real-ip")?.trim();

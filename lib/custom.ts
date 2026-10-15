@@ -9,7 +9,7 @@ import { validateCustomRequest, type CustomRequestInput } from "./custom-input";
 import { env } from "./env";
 import { checkLogo, LOGO_EXT } from "./image-check";
 import { displayLink } from "./links";
-import { checkLimits, CUSTOM_LIMITS } from "./rate-limit";
+import { checkLimits, CUSTOM_LIMITS, normalizeEmailKey } from "./rate-limit";
 import { escapeHtml, sendTelegram, sendTelegramPhoto } from "./telegram";
 
 // Өөрийн логотой хүсэлт: шалгах → rate limit → лого хадгалах → бизнес upsert → хүсэлт → Telegram.
@@ -67,7 +67,7 @@ export async function submitCustomRequest(
   // Шалгалт давсны дараа л тоолно — алдаатай бөглөсөн оролдлого хязгаарыг идэхгүй
   const limited = await checkLimits(deps.db.hitRateLimit, deps.secret, [
     { rule: CUSTOM_LIMITS.ip, value: ip },
-    { rule: CUSTOM_LIMITS.email, value: input.email },
+    { rule: CUSTOM_LIMITS.email, value: normalizeEmailKey(input.email) },
   ]);
   if (!limited.ok) {
     return {

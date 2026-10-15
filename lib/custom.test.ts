@@ -165,3 +165,15 @@ describe("customRequestMessage", () => {
     expect(m).toContain("ЛОГОГҮЙ — гараар хийнэ");
   });
 });
+
+describe("custom_email rate limit түлхүүр", () => {
+  it("+tag-тэй gmail нь ижил хязгаарт тоологдоно, илгээх хаяг (snapshot) хэвээр", async () => {
+    const keys: string[] = [];
+    const s = setup();
+    s.deps.db.hitRateLimit = async (bucket, keyHash) => (bucket === "custom_email" && keys.push(keyHash), true);
+    await submitCustomRequest({ ...fields, email: "Bat+one@Gmail.com" }, { bytes: PNG, type: "image/png" }, "ip", s.deps);
+    await submitCustomRequest({ ...fields, email: "bat+two@gmail.com" }, { bytes: PNG, type: "image/png" }, "ip", s.deps);
+    expect(keys[0]).toBe(keys[1]);
+    expect(s.inserted.map((r) => r.email)).toEqual(["bat+one@gmail.com", "bat+two@gmail.com"]);
+  });
+});

@@ -5,24 +5,17 @@ import { customDb, type CustomDb, type CustomRequest } from "./custom-db";
 import { mockupEmail } from "./custom-email";
 import { sendEmail } from "./email";
 import { env } from "./env";
-import { DESIGN_KEYS, designSet, type DesignKey } from "./mockups/designs";
+import { mockupPath, PLATFORM_LABEL, requestPlatforms } from "./mockup-paths";
+import { DESIGN_KEYS, designSet } from "./mockups/designs";
 import { prepareLogo } from "./mockups/logo";
-import { renderDesigns, variants, type Platform, type RenderedDesign } from "./mockups/render";
+import { renderDesigns, type RenderedDesign } from "./mockups/render";
 import { siteUrl } from "./site";
 import { escapeHtml, sendTelegram, sendTelegramMediaGroup } from "./telegram";
 
 // Шат 2: лого → 3 загвар × платформ (FB/IG, QR шалгасан) → mockups bucket → 'awaiting_approval' → Telegram.
 // Админ "Имэйл илгээх" дарахад харилцагч руу имэйл (MOCKUP_AUTO_SEND=true бол шууд).
 
-/** <dir>/A-fb.png (стенд дээрх танилцуулга), <dir>/A-fb-face.png (хэвлэх нүүр) */
-export const mockupPath = (dir: string, key: DesignKey, platform: Platform, kind: "preview" | "face") =>
-  `${dir}/${key}-${platform}${kind === "face" ? "-face" : ""}.png`;
-
-/** Хүсэлтийн хувилбарууд — загвар бүрт өгсөн платформ бүр (FB, IG дарааллаар) */
-export const requestPlatforms = (req: Pick<CustomRequest, "fb_url" | "ig_url">): Platform[] =>
-  variants(req.fb_url, req.ig_url).map((v) => v.platform);
-
-export const PLATFORM_LABEL: Record<Platform, string> = { fb: "Facebook", ig: "Instagram" };
+export { mockupPath, PLATFORM_LABEL, requestPlatforms } from "./mockup-paths";
 
 // Түлхүүр URL-д ХЭЗЭЭ Ч орохгүй — админ cookie-оор нэвтэрнэ (/admin/login)
 export const adminUrl = (base: string, id: string) => `${base.replace(/\/+$/, "")}/admin/custom/${id}`;
@@ -88,6 +81,8 @@ export async function runMockups({ req, set }: Claimed, deps: MockupDeps = defau
         deps.db.uploadMockup(mockupPath(dir, d.key, d.platform, "face"), d.face),
       ]),
     );
+    // Багц бүрийг бүртгэнэ — /c/<token>?s=<багц> хуучин имэйлийн линк ч зөв зургаа олно
+    await deps.db.recordMockupSet(id, set, dir);
     if (!(await deps.db.finishGeneration(id, set, dir))) return "skipped"; // шинэ үүсгэлт давж гарсан
   } catch (e) {
     await deps.db.failGeneration(id, set).catch(() => {});

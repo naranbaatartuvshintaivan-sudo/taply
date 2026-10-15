@@ -1,9 +1,9 @@
 import "server-only";
-import { sb } from "./db";
+import { sb, type NewOrder, type Order } from "./db";
 
 // Custom (өөрийн логотой) хүсэлтийн DB/Storage хандалт — зөвхөн сервер, service role.
 // Mockup, имэйл, хэвлэх файл нь ҮРГЭЛЖ custom_requests-ийн snapshot (business_name,
-// contact_name, email)-ыг ашиглана. businesses нь зөвхөн холбоо барих лавлах.
+// contact_name, email, phone, district, address)-ыг ашиглана. businesses нь зөвхөн холбоо барих лавлах.
 
 export type CustomStatus = "generating" | "awaiting_approval" | "sent" | "chosen" | "failed" | "manual";
 
@@ -27,9 +27,18 @@ export type CustomRequest = {
   mockup_dir: string | null;
   generated_at: string | null;
   sent_at: string | null;
+  /** Төлөгдсөн үед: аль багцаас сонгосон, хэзээ */
+  chosen_set: number | null;
+  chosen_at: string | null;
+  /** Хүргэлтийн snapshot — захиалга үүсгэхэд businesses-ийг биш, эдгээрийг ашиглана */
+  phone: string;
+  district: string;
+  address: string;
   created_at: string;
   updated_at: string;
 };
+
+export type MockupSet = { request_id: string; design_set: number; mockup_dir: string; created_at: string };
 
 export type NewBusiness = {
   name: string;
@@ -42,8 +51,11 @@ export type NewBusiness = {
 
 export type NewCustomRequest = Pick<
   CustomRequest,
-  "id" | "token" | "business_id" | "business_name" | "contact_name" | "email" | "quantity" | "status" | "fb_url" | "ig_url" | "logo_path" | "note"
+  | "id" | "token" | "business_id" | "business_name" | "contact_name" | "email" | "phone" | "district" | "address"
+  | "quantity" | "status" | "fb_url" | "ig_url" | "logo_path" | "note"
 >;
+
+export const PAID_STATUSES = ["paid", "in_production", "delivered"] as const;
 
 export interface CustomDb {
   hitRateLimit(bucket: string, keyHash: string, limit: number, window: string): Promise<boolean>;
@@ -72,6 +84,19 @@ export interface CustomDb {
   releaseSend(id: string, set: number): Promise<void>;
   mockupUrl(path: string): string;
   logoSignedUrl(path: string): Promise<string | null>;
+
+  // ─── Шат 3: сонголт ба төлбөр ───
+  /** Генераци бүрийг custom_mockup_sets-д бичнэ (хуучин багцын линк ажиллахын тулд) */
+  recordMockupSet(requestId: string, set: number, dir: string): Promise<void>;
+  getByToken(token: string): Promise<CustomRequest | null>;
+  getMockupSet(requestId: string, set: number): Promise<MockupSet | null>;
+  /** Хүсэлтийн цуцлагдаагүй захиалгууд (pending + төлөгдсөн) */
+  listOpenOrders(requestId: string): Promise<Order[]>;
+  /** Шинэ custom захиалга. Нэг хүсэлтэд pending аль хэдийн байвал (unique index) null. */
+  insertCustomOrder(o: NewOrder & { custom_request_id: string }): Promise<Order | null>;
+  /** Төлөгдсөн үед — давтан дуудсан ч ижил үр дүн */
+  markChosen(requestId: string, design: string, set: number): Promise<void>;
+  downloadMockup(path: string): Promise<Uint8Array>;
 }
 
 function must<T>(r: { data: T; error: { message: string; code?: string } | null }, where: string): T {
@@ -82,6 +107,7 @@ function must<T>(r: { data: T; error: { message: string; code?: string } | null 
 export const LOGO_BUCKET = "logos";
 export const MOCKUP_BUCKET = "mockups";
 
+const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STUCK_MINUTES = 3;
 
@@ -190,6 +216,61 @@ export const customDb: CustomDb = {
 
   mockupUrl(path) {
     return sb().storage.from(MOCKUP_BUCKET).getPublicUrl(path).data.publicUrl;
+  },
+
+  async recordMockupSet(requestId, set, dir) {
+    must(
+      await sb().from("custom_mockup_sets").upsert({ request_id: requestId, design_set: set, mockup_dir: dir }, { onConflict: "request_id,design_set" }),
+      "recordMockupSet",
+    );
+  },
+
+  async getByToken(token) {
+    if (!TOKEN_RE.test(token)) return null;
+    return must(await sb().from("custom_requests").select().eq("token", token).maybeSingle(), "getByToken") as CustomRequest | null;
+  },
+
+  async getMockupSet(requestId, set) {
+    if (!Number.isInteger(set) || set < 1) return null;
+    return must(
+      await sb().from("custom_mockup_sets").select().eq("request_id", requestId).eq("design_set", set).maybeSingle(),
+      "getMockupSet",
+    ) as MockupSet | null;
+  },
+
+  async listOpenOrders(requestId) {
+    return must(
+      await sb()
+        .from("orders")
+        .select()
+        .eq("custom_request_id", requestId)
+        .in("status", ["pending_payment", ...PAID_STATUSES])
+        .order("created_at", { ascending: false }),
+      "listOpenOrders",
+    ) as Order[];
+  },
+
+  async insertCustomOrder(o) {
+    const r = await sb().from("orders").insert(o).select().single();
+    if (r.error?.code === "23505") return null; // өөр хүсэлт яг одоо pending үүсгэсэн
+    return must(r, "insertCustomOrder") as Order;
+  },
+
+  async markChosen(requestId, design, set) {
+    must(
+      await sb()
+        .from("custom_requests")
+        .update({ status: "chosen", chosen_design: design, chosen_set: set, chosen_at: new Date().toISOString() })
+        .eq("id", requestId)
+        .neq("status", "chosen"),
+      "markChosen",
+    );
+  },
+
+  async downloadMockup(path) {
+    const r = await sb().storage.from(MOCKUP_BUCKET).download(path);
+    if (r.error || !r.data) throw new Error(`Storage downloadMockup: ${r.error?.message ?? "хоосон"}`);
+    return new Uint8Array(await r.data.arrayBuffer());
   },
 
   async logoSignedUrl(path) {

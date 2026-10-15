@@ -1,8 +1,9 @@
 import "server-only";
 import { after } from "next/server";
 import { alert } from "./alert";
+import { customPaidDeps } from "./custom-paid";
 import { CONTACT } from "./config";
-import { db as realDb, type Db, type Order } from "./db";
+import { db as realDb, type Db, type Order, type Payment } from "./db";
 import { emailLayout, sendEmail } from "./email";
 import { env } from "./env";
 import { displayLink } from "./links";
@@ -20,6 +21,18 @@ export type Deps = {
   alert: typeof alert;
   schedule: (fn: () => Promise<void>) => void;
   siteUrl: string;
+  /** Custom (өөрийн логотой) захиалгын нэмэлт — байхгүй бол энгийн захиалгын замаар л явна */
+  custom?: CustomPaidDeps;
+};
+
+export type Photo = { bytes: Uint8Array; filename: string; type: string };
+
+export type CustomPaidDeps = {
+  /** custom_requests.status = chosen, chosen_design, chosen_set, chosen_at (давтан дуудсан ч ижил) */
+  markChosen: (requestId: string, design: string, set: number) => Promise<void>;
+  /** Сонгосон загварын зураг(ууд) + эх лого — Telegram цомогт */
+  photos: (order: Order) => Promise<Photo[]>;
+  media: (photos: Photo[], html: string) => Promise<void>;
 };
 
 export function defaultDeps(): Deps {
@@ -33,6 +46,7 @@ export function defaultDeps(): Deps {
     alert,
     schedule: (fn) => after(fn),
     siteUrl: e.NEXT_PUBLIC_SITE_URL.replace(/\/$/, ""),
+    custom: customPaidDeps(),
   };
 }
 
@@ -81,6 +95,29 @@ export async function retryCheckout(
   | { kind: "status"; status: Order["status"] }
   | { kind: "processing" }
 > {
+  const cancelled = await cancelOpenIntents(orderId, deps);
+  if (cancelled.kind !== "ok") return cancelled;
+  const { payments } = cancelled;
+
+  const order = await deps.db.getOrder(orderId);
+  if (!order || order.status !== "pending_payment") return { kind: "status", status: order?.status ?? "canceled" };
+  const attempt = payments.reduce((m, p) => Math.max(m, p.attempt), 0) + 1;
+  if (attempt > MAX_ATTEMPTS) throw new Error("Хэт олон оролдлого");
+  return { kind: "redirect", url: await startCheckout(order, attempt, deps) };
+}
+
+/**
+ * Захиалгын төлөгдөөгүй бүх intent-ийг Wire дээр цуцална (retryCheckout болон custom захиалгыг
+ * солиход). Эхлээд төлөгдсөн эсэхийг markPaid-аар шалгана. "processing" бол цуцлахгүй.
+ */
+export async function cancelOpenIntents(
+  orderId: string,
+  deps: Deps = defaultDeps(),
+): Promise<
+  | { kind: "ok"; payments: Payment[] }
+  | { kind: "status"; status: Order["status"] }
+  | { kind: "processing" }
+> {
   // Эхлээд төлөгдсөн эсэхийг шалгана (хэрэглэгч аль хэдийн төлсөн байж болно)
   const synced = await markPaid(orderId, undefined, deps);
   if (synced.status !== "pending_payment") return { kind: "status", status: synced.status };
@@ -100,12 +137,7 @@ export async function retryCheckout(
       throw e;
     }
   }
-
-  const order = await deps.db.getOrder(orderId);
-  if (!order || order.status !== "pending_payment") return { kind: "status", status: order?.status ?? "canceled" };
-  const attempt = payments.reduce((m, p) => Math.max(m, p.attempt), 0) + 1;
-  if (attempt > MAX_ATTEMPTS) throw new Error("Хэт олон оролдлого");
-  return { kind: "redirect", url: await startCheckout(order, attempt, deps) };
+  return { kind: "ok", payments };
 }
 
 // ─── markPaid — webhook, /o/[id], reconcile бүгд үүнийг дуудна ─
@@ -140,7 +172,18 @@ export async function markPaid(
       continue;
     }
 
-    const won = await deps.db.markOrderPaid(order.id, pi.id);
+    let won: Awaited<ReturnType<Db["markOrderPaid"]>>;
+    try {
+      won = await deps.db.markOrderPaid(order.id, pi.id);
+    } catch (e) {
+      // Custom: нэг хүсэлтэд өөр захиалга аль хэдийн төлөгдсөн (unique index 23505). Мөнгө орсон ч
+      // энэ захиалгыг paid болгохгүй — гараар буцаалт хийнэ.
+      if (order.custom_request_id && /23505/.test(String((e as Error)?.message))) {
+        await deps.alert("Давхар төлбөр", order.code, new Error(`${pi.id} — энэ хүсэлтэд өөр захиалга төлөгдсөн, буцаалт хийх хэрэгтэй`));
+        return { status: order.status, newlyPaid: false };
+      }
+      throw e;
+    }
     if (won) {
       deps.schedule(() => deliverNotifications(order.id, won.shortSkus, deps));
       return { status: "paid", newlyPaid: true };
@@ -158,10 +201,19 @@ export async function markPaid(
 }
 
 // ─── Мэдэгдэл ─────────────────────────────────────────────────
+/** Custom захиалгын сонгосон загвар, багц (items-д хадгалагдсан) */
+export function chosenDesign(order: Pick<Order, "items">): { design: "A" | "B" | "C"; set: number } | null {
+  const it = order.items.find((i) => i.design && i.set);
+  return it?.design && it.set ? { design: it.design, set: it.set } : null;
+}
+
 export function itemsText(order: Pick<Order, "items">): string {
   return order.items
     .filter((i) => i.qty > 0)
-    .map((i) => `${i.qty}× ${SKU_LABEL[i.sku as Sku] ?? (i.sku === "test_100" ? "🧪 ТЕСТ 100₮" : i.sku)}`)
+    .map(
+      (i) =>
+        `${i.qty}× ${SKU_LABEL[i.sku as Sku] ?? (i.sku === "test_100" ? "🧪 ТЕСТ 100₮" : i.sku)}${i.platform ? ` (${i.platform.toUpperCase()})` : ""}`,
+    )
     .join(", ");
 }
 
@@ -178,9 +230,10 @@ export function paidTelegramHtml(order: Order, siteUrl: string, shortSkus: strin
     order.fb_url ? `FB: ${escapeHtml(displayLink(order.fb_url))}` : null,
     order.ig_url ? `IG: ${escapeHtml(displayLink(order.ig_url))}` : null,
   ].filter(Boolean);
+  const choice = chosenDesign(order);
   const head =
     order.type === "custom"
-      ? `🟣 CUSTOM · ${escapeHtml(order.code)} · ТӨЛӨГДСӨН`
+      ? `🟣 CUSTOM · ${escapeHtml(order.code)} · ТӨЛӨГДСӨН${choice ? ` · загвар ${choice.design} (багц ${choice.set})` : ""}`
       : `🟢 ШИНЭ ЗАХИАЛГА · ${escapeHtml(order.code)} · ТӨЛӨГДСӨН`;
   const lines = [
     `<b>${head}</b>`,
@@ -229,16 +282,41 @@ export async function deliverNotifications(orderId: string, shortSkus: string[] 
   const order = await deps.db.getOrder(orderId);
   if (!order || !order.paid_at) return;
 
+  // Custom: хүсэлтийг "сонгосон" болгоно (давтан дуудсан ч ижил үр дүн, мэдэгдлээс хамааралгүй)
+  const choice = order.type === "custom" ? chosenDesign(order) : null;
+  const custom = deps.custom && order.custom_request_id && choice ? deps.custom : null;
+  if (custom && choice && order.custom_request_id) {
+    try {
+      await custom.markChosen(order.custom_request_id, choice.design, choice.set);
+    } catch (e) {
+      await deps.alert("Custom сонголт", order.code, e);
+    }
+  }
+
   if (!order.notified_at && (await deps.db.claimNotification(order.id, "telegram"))) {
+    let sent = false;
     try {
       await deps.telegram(paidTelegramHtml(order, deps.siteUrl, shortSkus), {
         buttonText: "Захиалга нээх",
         buttonUrl: `${deps.siteUrl}/o/${order.id}`,
       });
       await deps.db.setNotified(order.id, "telegram");
+      sent = true;
     } catch (e) {
       await deps.db.releaseNotification(order.id, "telegram").catch(() => {});
       await deps.alert("Telegram мэдэгдэл", order.code, e);
+    }
+    // Custom: сонгосон загвар + эх лого цомгоор. Үндсэн мэдэгдэл аль хэдийн явсан тул алдаа нь
+    // зөвхөн ⚠️ — lease-ийг суллахгүй, давхар мессеж явахгүй.
+    if (sent && custom && choice) {
+      try {
+        const photos = await custom.photos(order);
+        if (photos.length > 0) {
+          await custom.media(photos, `🟣 ${escapeHtml(order.code)} · загвар ${choice.design} (багц ${choice.set}) · эх лого`);
+        }
+      } catch (e) {
+        await deps.alert("Custom Telegram зураг", order.code, e);
+      }
     }
     // Make (Google Sheet) — заавал биш, амжилтгүй бол зөвхөн ⚠️
     if (deps.makeWebhook) {

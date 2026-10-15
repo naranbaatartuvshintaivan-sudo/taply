@@ -395,3 +395,87 @@ describe("retryCheckout", () => {
     expect(s.deps.wire.createPaymentIntent).not.toHaveBeenCalled();
   });
 });
+
+// ─── Шат 3: custom захиалгын төлөгдөлт (markPaid-ийн ижил зам + custom салбар) ───
+describe("custom захиалга төлөгдөхөд", () => {
+  const REQ = "99999999-8888-7777-6666-555555555555";
+  function customSetup() {
+    const s = setup();
+    const o = s.orders.get(ORDER_ID)!;
+    o.type = "custom";
+    o.custom_request_id = REQ;
+    o.items = [
+      { sku: "custom_wide", qty: 2, platform: "fb", design: "B", set: 1 },
+      { sku: "custom_wide", qty: 1, platform: "ig", design: "B", set: 1 },
+    ];
+    const chosen: string[] = [];
+    const media = vi.fn(async () => {});
+    s.deps.custom = {
+      markChosen: async (id, d, set) => void chosen.push(`${id}:${d}:${set}`),
+      photos: async () => [
+        { bytes: new Uint8Array([1]), filename: "B-fb.png", type: "image/png" },
+        { bytes: new Uint8Array([2]), filename: "logo.png", type: "image/png" },
+      ],
+      media,
+    };
+    return { ...s, chosen, media };
+  }
+
+  it("Telegram 1 (загвар B, багц 1) + зурагтай цомог 1, хүсэлт 'chosen' — зэрэг 10 дуудалтад ч нэг удаа", async () => {
+    const s = customSetup();
+    await Promise.all(Array.from({ length: 10 }, () => markPaid(ORDER_ID, "pi_one", s.deps)));
+    await s.flush();
+    expect(s.telegram).toHaveBeenCalledTimes(1);
+    const html = (s.telegram.mock.calls[0] as unknown as [string])[0];
+    expect(html).toContain("🟣 CUSTOM · TP-1042 · ТӨЛӨГДСӨН · загвар B (багц 1)");
+    expect(html).toContain("2× Өөрийн логотой стенд (FB), 1× Өөрийн логотой стенд (IG)");
+    expect(s.media).toHaveBeenCalledTimes(1);
+    expect(s.chosen).toEqual([`${REQ}:B:1`]);
+  });
+
+  it("reconcile дахин дуудсан ч мэдэгдэл давхардахгүй", async () => {
+    const s = customSetup();
+    await markPaid(ORDER_ID, "pi_one", s.deps);
+    await s.flush();
+    await deliverNotifications(ORDER_ID, [], s.deps);
+    expect(s.telegram).toHaveBeenCalledTimes(1);
+    expect(s.media).toHaveBeenCalledTimes(1);
+  });
+
+  it("зургийн алдаа → зөвхөн ⚠️, үндсэн мэдэгдэл явсан, дахин явуулахгүй", async () => {
+    const s = customSetup();
+    s.deps.custom!.photos = async () => {
+      throw new Error("storage down");
+    };
+    await markPaid(ORDER_ID, "pi_one", s.deps);
+    await s.flush();
+    expect(s.telegram).toHaveBeenCalledTimes(1);
+    expect(s.alert).toHaveBeenCalledWith("Custom Telegram зураг", "TP-1042", expect.any(Error));
+    expect(s.orders.get(ORDER_ID)!.notified_at).not.toBeNull();
+  });
+
+  it("нэг хүсэлтэд өөр захиалга аль хэдийн төлөгдсөн (unique 23505) → paid болохгүй, ⚠️ Давхар төлбөр, мэдэгдэлгүй", async () => {
+    const s = customSetup();
+    s.deps.db.markOrderPaid = async () => {
+      throw new Error('DB markOrderPaid: 23505 duplicate key value violates unique constraint "orders_one_paid_per_custom_request"');
+    };
+    const r = await markPaid(ORDER_ID, "pi_one", s.deps);
+    await s.flush();
+    expect(r).toEqual({ status: "pending_payment", newlyPaid: false });
+    expect(s.alert).toHaveBeenCalledWith("Давхар төлбөр", "TP-1042", expect.any(Error));
+    expect(s.telegram).not.toHaveBeenCalled();
+    expect(s.chosen).toEqual([]);
+  });
+
+  it("энгийн захиалгад custom deps байсан ч custom салбар ажиллахгүй", async () => {
+    const s = setup();
+    const media = vi.fn(async () => {});
+    s.deps.custom = { markChosen: vi.fn(async () => {}), photos: async () => [], media };
+    await markPaid(ORDER_ID, "pi_one", s.deps);
+    await s.flush();
+    expect(s.telegram).toHaveBeenCalledTimes(1);
+    expect((s.telegram.mock.calls[0] as unknown as [string])[0]).toContain("🟢 ШИНЭ ЗАХИАЛГА");
+    expect(media).not.toHaveBeenCalled();
+    expect(s.deps.custom.markChosen).not.toHaveBeenCalled();
+  });
+});

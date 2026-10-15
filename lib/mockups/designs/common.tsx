@@ -23,8 +23,8 @@ export const CAPTION_TOP = PLATE_TOP + PLATE + 16;
 export const HEAD_SIZE = 50;
 /** Платформын дүрс 104px = 10.4 мм */
 export const ICON = 104;
-/** "эсвэл QR уншуулна уу" 34px = 3.4 мм (≈9pt) */
-export const CAPTION_SIZE = 34;
+/** "эсвэл QR уншуулна уу" 42px фонт → том үсэг ≈3 мм */
+export const CAPTION_SIZE = 42;
 /** Дүрс + уриалгын мөр QR хавтангийн яг дээр */
 export const ROW_TOP = PLATE_TOP - ICON - 22;
 
@@ -51,6 +51,8 @@ export const IVORY: Rgb = { r: 244, g: 238, b: 226 };
 export const CREAM: Rgb = { r: 246, g: 241, b: 231 };
 export const GOLD: Rgb = { r: 200, g: 167, b: 94 };
 export const NIGHT: Rgb = { r: 14, g: 14, b: 14 };
+/** Цайвар алт — хар дэвсгэр дээр уриалгад (контраст ≥7:1, тестээр шалгана) */
+export const LIGHT_GOLD: Rgb = { r: 236, g: 220, b: 178 };
 export const RULE: Rgb = { r: 222, g: 222, b: 222 };
 export const MUTE: Rgb = { r: 96, g: 96, b: 96 };
 
@@ -235,7 +237,64 @@ export function PlatformIcon({ f, color, on, size }: { f: FaceInput; color: Rgb;
   return <img src={p === "fb" ? facebookIcon(hex(color), hex(on)) : instagramIcon(hex(color))} width={size} height={size} alt="" />;
 }
 
-/** Дүрс + "Утсаа энд хүргээд дагаарай" — QR хавтангийн яг дээр */
+/** Том үсгийн өндөр ≈ фонтын хэмжээ × 0.72 (Manrope, Playfair) → 70px фонт = 5 мм үсэг */
+export const CAP_RATIO = 0.72;
+export const CTA_BIG = 70;
+export const ICON_BIG = 132;
+
+/**
+ * Том уриалга: дүрс (13 мм) + 2 мөр "Утсаа энд хүргээд / дагаарай" (том үсэг ≥5 мм).
+ * QR хавтангийн яг дээр, QR-аас давамгайлахгүй (өндөр нь QR-ийн ~1/3).
+ */
+export function CtaBlock({
+  f,
+  font,
+  weight,
+  color,
+  iconColor,
+  iconOn,
+  italic = false,
+  size = CTA_BIG,
+  icon = ICON_BIG,
+}: {
+  f: FaceInput;
+  font: string;
+  weight: number;
+  color: Rgb;
+  iconColor: Rgb;
+  iconOn: Rgb;
+  italic?: boolean;
+  size?: number;
+  icon?: number;
+}) {
+  const h = Math.max(icon, Math.round(size * 1.04 * 2));
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: PLATE_TOP - 24 - h,
+        left: 0,
+        width: FACE_W,
+        height: h,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 28,
+      }}
+    >
+      <PlatformIcon f={f} color={iconColor} on={iconOn} size={icon} />
+      <div style={{ display: "flex", flexDirection: "column", fontFamily: font, fontWeight: weight, fontStyle: italic ? "italic" : "normal", fontSize: size, lineHeight: 1.04, color: hex(color), letterSpacing: -0.5 }}>
+        <span>Утсаа энд хүргээд</span>
+        <span>дагаарай</span>
+      </div>
+    </div>
+  );
+}
+
+/** CtaBlock-ийн дээд ирмэг (дээрх агуулга үүнээс доош орохгүй) */
+export const CTA_BLOCK_TOP = PLATE_TOP - 24 - Math.max(ICON_BIG, Math.round(CTA_BIG * 1.04 * 2));
+
+/** Дүрс + "Утсаа энд хүргээд дагаарай" нэг мөрөнд — QR хавтангийн яг дээр (багц 2, 3) */
 export function CtaRow({
   f,
   font,

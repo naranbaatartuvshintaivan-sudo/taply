@@ -29,6 +29,8 @@ const schema = z.object({
     .default("false")
     .transform((v) => v === "true"),
   MAKE_WEBHOOK_URL: z.url().optional(),
+  // /custom формыг нийтэд нээх эсэх (lib/flags.ts) — эзэмшигчийн OK-оор true болгоно
+  CUSTOM_PUBLIC: z.enum(["true", "false"]).default("false"),
 });
 
 export type Env = z.infer<typeof schema>;

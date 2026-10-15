@@ -1,4 +1,8 @@
+import { cookies } from "next/headers";
+import { ADMIN_COOKIE } from "@/lib/admin";
 import { submitCustomRequest } from "@/lib/custom";
+import { adminFromCookie } from "@/lib/custom-checkout";
+import { customPublic } from "@/lib/flags";
 import { json, supportMessage, userError } from "@/lib/http";
 import { LOGO_MAX_BYTES, LOGO_TOO_BIG } from "@/lib/image-check";
 import { clientIp } from "@/lib/rate-limit";
@@ -9,6 +13,10 @@ export const maxDuration = 60;
 
 // Өөрийн логотой хүсэлт (multipart/form-data). Бүх шалгалт lib/custom.ts-д.
 export async function POST(req: Request) {
+  // CUSTOM_PUBLIC=false үед зөвхөн админ (cookie) — нийтэд 404
+  if (!customPublic() && !adminFromCookie((await cookies()).get(ADMIN_COOKIE)?.value)) {
+    return new Response("Not found", { status: 404 });
+  }
   const len = Number(req.headers.get("content-length") ?? 0);
   if (len > LOGO_MAX_BYTES + 64 * 1024) return userError(413, LOGO_TOO_BIG, { field: "logo" });
 

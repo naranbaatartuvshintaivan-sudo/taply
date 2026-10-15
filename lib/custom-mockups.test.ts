@@ -28,6 +28,11 @@ const baseReq: CustomRequest = {
   mockup_dir: null,
   generated_at: null,
   sent_at: null,
+  chosen_set: null,
+  chosen_at: null,
+  phone: "99112233",
+  district: "Баянгол",
+  address: "12-р байр",
   created_at: "now",
   updated_at: "now",
 };
@@ -48,6 +53,7 @@ function setup(over: Partial<MockupDeps> = {}, reqOver: Partial<CustomRequest> =
   const alerts: string[] = [];
   const emails: { to: string; subject: string; idempotencyKey: string }[] = [];
   const notified: string[] = [];
+  const sets: string[] = [];
   const db: Partial<CustomDb> = {
     getCustomRequest: async () => ({ ...row }),
     downloadLogo: async () => new Uint8Array([1]),
@@ -59,6 +65,7 @@ function setup(over: Partial<MockupDeps> = {}, reqOver: Partial<CustomRequest> =
       return row.design_set;
     },
     uploadMockup: async (path) => void uploads.push(path),
+    recordMockupSet: async (_id, set, dir) => void sets.push(`${set}:${dir}`),
     finishGeneration: async (_id, set, dir) => {
       if (row.design_set !== set || row.status !== "generating") return false;
       Object.assign(row, { status: "awaiting_approval", mockup_dir: dir });
@@ -86,7 +93,7 @@ function setup(over: Partial<MockupDeps> = {}, reqOver: Partial<CustomRequest> =
     newDir: () => "dir-1",
     ...over,
   };
-  return { deps, row, uploads, alerts, emails, notified };
+  return { deps, row, uploads, alerts, emails, notified, sets };
 }
 
 describe("generateMockups", () => {
@@ -97,6 +104,7 @@ describe("generateMockups", () => {
     expect(s.uploads).toEqual(["dir-1/A-fb.png", "dir-1/A-fb-face.png", "dir-1/B-fb.png", "dir-1/B-fb-face.png", "dir-1/C-fb.png", "dir-1/C-fb-face.png"]);
     expect(s.notified).toEqual(["1@https://taplymn.com"]); // siteUrl нь deps-ээс (preview бол тухайн хаяг)
     expect(s.emails).toHaveLength(0);
+    expect(s.sets).toEqual(["1:dir-1"]); // custom_mockup_sets-д бүртгэгдсэн
   });
 
   it("MOCKUP_AUTO_SEND=true бол шууд имэйл", async () => {
@@ -193,7 +201,8 @@ describe("mockupEmail", () => {
 
   it("гарчиг, сонгох холбоос, утас", () => {
     expect(mail.subject).toBe("TAPLY — Номин <Бутик>-ийн 3 загвар бэлэн боллоо");
-    for (const k of ["A", "B", "C"]) expect(mail.html).toContain(`https://taplymn.com/c/${"t".repeat(32)}?d=${k}`);
+    for (const k of ["A", "B", "C"]) expect(mail.html).toContain(`https://taplymn.com/c/${"t".repeat(32)}?d=${k}&amp;s=0`);
+    expect(mail.text).toContain(`/c/${"t".repeat(32)}?d=A&s=0`); // багцын дугаар линкэнд
     expect(mail.html.match(/>Энийг сонгох<\/a>/g)).toHaveLength(3);
     expect(mail.html).toContain("9973 2298 · 8018 8488");
     expect(mail.text).toContain("Өөрчлөлт хэрэгтэй бол залгана уу: 9973 2298 · 8018 8488");

@@ -96,6 +96,10 @@ export async function submitCustomRequest(
       business_name: input.business,
       contact_name: input.name,
       email: input.email,
+      // Хүргэлтийн snapshot — захиалга үүсгэхэд эдгээрийг ашиглана (businesses биш)
+      phone: input.phone,
+      district: input.district,
+      address: input.address,
       quantity: input.qty,
       status: logoPath ? "generating" : "manual",
       fb_url: input.fbUrl,

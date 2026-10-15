@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
 import { Footer } from "@/components/Footer";
 import { Nav } from "@/components/Nav";
 import { CustomForm } from "@/components/custom/CustomForm";
+import { ADMIN_COOKIE } from "@/lib/admin";
 import { SHOW_PRICES } from "@/lib/config";
+import { adminFromCookie } from "@/lib/custom-checkout";
+import { customPublic } from "@/lib/flags";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Өөрийн логотой стенд — TAPLY",
   description: "Логогоо илгээнэ үү. 3 загвар гаргаж үзүүлнэ, та сонгоно.",
 };
 
-export default function CustomPage() {
+export default async function CustomPage() {
+  // CUSTOM_PUBLIC=false үед зөвхөн админд (cookie) нээгдэнэ
+  if (!customPublic() && !adminFromCookie((await cookies()).get(ADMIN_COOKIE)?.value)) notFound();
   return (
     <main className="w-full overflow-x-clip bg-white text-ink">
       <Nav showPrices={SHOW_PRICES} home={false} />

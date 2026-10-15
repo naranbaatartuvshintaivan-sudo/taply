@@ -2,7 +2,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
+import { contrast } from "./color";
 import { cleanName, designSet, fitLogo, fitSize, wrapLines, type FaceInput } from "./designs";
+import { CAP_RATIO, CAPTION_SIZE, CTA_BIG, ICON, ICON_BIG, LIGHT_GOLD, MM, NIGHT, QR_MAX } from "./designs/common";
 import { prepareLogo } from "./logo";
 import { decodeQr } from "./qr";
 import { renderDesigns, variants } from "./render";
@@ -133,4 +135,24 @@ describe("renderDesigns", () => {
       }, 120_000);
     }
   }
+});
+
+describe("хэвлэх хэмжээ (120×140 мм, 10 px = 1 мм)", () => {
+  it("том уриалга: том үсэг ≥5 мм, дүрс ≥10 мм; доод бичвэр ≥3 мм; QR ≥37 мм", () => {
+    expect(CTA_BIG * CAP_RATIO).toBeGreaterThanOrEqual(5 * MM);
+    expect(ICON_BIG).toBeGreaterThanOrEqual(10 * MM);
+    expect(ICON).toBeGreaterThanOrEqual(10 * MM);
+    expect(CAPTION_SIZE * CAP_RATIO).toBeGreaterThanOrEqual(3 * MM);
+    expect(QR_MAX).toBeGreaterThanOrEqual(400);
+  });
+  it("Премиум хар: цайвар алтан уриалга хар дээр ≥7:1", () => {
+    expect(contrast(LIGHT_GOLD, NIGHT)).toBeGreaterThanOrEqual(7);
+  });
+  it("өргөн лого (4:1) A, C дээр стендийн өргөний ~70% хүрнэ, өндөр хязгаартай", () => {
+    const wide = fitLogo({ logo: { width: 800, height: 200 } } as FaceInput, 840, 290, 840 * 210);
+    expect(wide.width).toBeGreaterThanOrEqual(830);
+    expect(wide.height).toBeLessThanOrEqual(290);
+    const square = fitLogo({ logo: { width: 500, height: 500 } } as FaceInput, 840, 290, 840 * 210);
+    expect(square.height).toBeLessThanOrEqual(290);
+  });
 });

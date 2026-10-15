@@ -6,6 +6,9 @@ import { fonts } from "./fonts";
 import type { PreparedLogo } from "./logo";
 import { decodeQr, qrPng } from "./qr";
 import { composeStand, PREVIEW, StandBackground } from "./stand";
+import { variants, type Platform } from "./variants";
+
+export { variants, type Platform };
 
 // 3 загварыг платформ бүрээр (FB, IG — өгсөн нь) рендэрлээд QR бүрийг буцааж уншиж шалгана.
 // FB+IG хоёулаа бол загвар бүр 2 хувилбартай: бүтэц ижил, зөвхөн дүрс + QR өөр.
@@ -20,19 +23,10 @@ export type RenderInput = {
   set: number;
 };
 
-export type Platform = "fb" | "ig";
 export type RenderedDesign = { key: DesignKey; platform: Platform; url: string; label: string; face: Buffer; preview: Buffer };
 
 export class QrMismatchError extends Error {}
 
-/** Өгсөн платформууд дарааллаар (FB, IG) — хувилбар бүрийн QR линк */
-export function variants(fbUrl: string | null, igUrl: string | null): { platform: Platform; url: string }[] {
-  const out: { platform: Platform; url: string }[] = [];
-  if (fbUrl) out.push({ platform: "fb", url: fbUrl });
-  if (igUrl) out.push({ platform: "ig", url: igUrl });
-  if (out.length === 0) throw new Error("FB эсвэл IG линк байхгүй");
-  return out;
-}
 
 const dataUri = (png: Buffer) => `data:image/png;base64,${png.toString("base64")}`;
 

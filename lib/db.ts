@@ -7,7 +7,11 @@ import { env } from "./env";
 
 export type OrderStatus = "pending_payment" | "paid" | "expired" | "canceled" | "in_production" | "delivered";
 
-export type OrderItem = { sku: string; qty: number };
+/**
+ * Захиалгын мөр. Custom захиалгад платформ (FB/IG тус бүр тоотой) болон сонгосон загвар,
+ * багц нэмэгдэнэ: [{ sku: "custom_wide", qty: 2, platform: "fb", design: "B", set: 1 }, …]
+ */
+export type OrderItem = { sku: string; qty: number; platform?: "fb" | "ig"; design?: "A" | "B" | "C"; set?: number };
 
 export type Order = {
   id: string;

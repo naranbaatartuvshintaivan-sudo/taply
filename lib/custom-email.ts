@@ -4,7 +4,7 @@ import { escapeHtml } from "./telegram";
 
 // Харилцагч руу явах "3 загвар бэлэн боллоо" имэйл. Цэвэр функц — unit test-тэй.
 // Загвар бүр: FB/IG хувилбар зэрэгцээ (нэг л платформ бол нэг зураг) + "Энийг сонгох"
-// → <site>/c/<token>?d=A (Шат 3-ын төлбөрийн хуудас).
+// → <site>/c/<token>?d=A&s=<багц> (Шат 3-ын төлбөрийн хуудас).
 
 export type MockupEmailDesign = {
   key: "A" | "B" | "C";
@@ -13,13 +13,14 @@ export type MockupEmailDesign = {
 };
 
 export function mockupEmail(
-  req: Pick<CustomRequest, "business_name" | "contact_name" | "token">,
+  req: Pick<CustomRequest, "business_name" | "contact_name" | "token" | "design_set">,
   designs: MockupEmailDesign[],
   siteUrl: string,
 ): { subject: string; html: string; text: string } {
   const e = escapeHtml;
   const site = siteUrl.replace(/\/+$/, "");
-  const choose = (k: string) => `${site}/c/${encodeURIComponent(req.token)}?d=${k}`;
+  // s = багцын дугаар: дахин үүсгэсний дараа ч хуучин имэйлийн линк өөрийн багцын зургийг харуулна
+  const choose = (k: string) => `${site}/c/${encodeURIComponent(req.token)}?d=${k}&s=${req.design_set}`;
   const phones = CONTACT.phones.map((p) => p.label).join(" · ");
   const subject = `TAPLY — ${req.business_name}-ийн 3 загвар бэлэн боллоо`;
 

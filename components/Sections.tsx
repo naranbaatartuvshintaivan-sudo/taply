@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CONTACT, PRICE_CARDS, SHOW_PRICES } from "@/lib/config";
 import { CUSTOMERS, customerAlt, distribute, type Customer } from "@/lib/customers";
+import { customPublic } from "@/lib/flags";
 import { PRODUCTS } from "@/lib/products";
 import { GoLink } from "./PageTransition";
 import { Photo } from "./Photo";
@@ -370,7 +371,7 @@ export function Price() {
   );
 }
 
-const orderChoices: {
+const orderChoices = (custom: boolean): {
   href: string;
   eyebrow: string;
   title: string;
@@ -378,7 +379,7 @@ const orderChoices: {
   from: string;
   cta: string;
   dark?: boolean;
-}[] = [
+}[] => [
   {
     href: "/order",
     eyebrow: "Facebook · Instagram",
@@ -388,12 +389,13 @@ const orderChoices: {
     cta: "Захиалах",
   },
   {
-    href: "/custom",
+    // CUSTOM_PUBLIC=false үед доорх чатын хэсэг рүү (форм нийтэд хаалттай)
+    href: custom ? "/custom" : "#contact",
     eyebrow: "Таны брэнд",
     title: "Өөрийн логотой",
     desc: "Логогоо илгээнэ үү. 3 загвар гаргаж үзүүлнэ, та сонгоно.",
     from: "44,900₮-өөс",
-    cta: "Захиалах",
+    cta: custom ? "Захиалах" : "Холбогдох",
     dark: true,
   },
 ];
@@ -408,7 +410,7 @@ export function Order() {
         Аль картаа сонгоод онлайнаар захиална уу. Бусдыг нь бид хийнэ.
       </p>
       <div className="grid gap-6 md:grid-cols-2">
-        {orderChoices.map((c) => {
+        {orderChoices(customPublic()).map((c) => {
           const cls =
             "group flex min-h-[320px] flex-col justify-between px-6 py-10 sm:px-12 sm:py-14 " +
             (c.dark ? "bg-ink text-white hover:bg-[#1f1f1f]" : "border-[1.5px] border-ink hover:bg-[#f5f5f5]");

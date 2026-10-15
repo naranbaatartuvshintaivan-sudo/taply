@@ -5,27 +5,36 @@ import { customDb, type CustomDb, type CustomRequest } from "./custom-db";
 import { mockupEmail } from "./custom-email";
 import { sendEmail } from "./email";
 import { env } from "./env";
-import { displayLink } from "./links";
 import { DESIGN_KEYS, designSet, type DesignKey } from "./mockups/designs";
 import { prepareLogo } from "./mockups/logo";
-import { renderDesigns, type RenderedDesign } from "./mockups/render";
+import { renderDesigns, variants, type Platform, type RenderedDesign } from "./mockups/render";
+import { siteUrl } from "./site";
 import { escapeHtml, sendTelegram, sendTelegramMediaGroup } from "./telegram";
 
-// Шат 2: лого → 3 загвар (QR шалгасан) → mockups bucket → 'awaiting_approval' → Telegram.
+// Шат 2: лого → 3 загвар × платформ (FB/IG, QR шалгасан) → mockups bucket → 'awaiting_approval' → Telegram.
 // Админ "Имэйл илгээх" дарахад харилцагч руу имэйл (MOCKUP_AUTO_SEND=true бол шууд).
 
-export const mockupPath = (dir: string, key: DesignKey, kind: "preview" | "face") =>
-  `${dir}/${key}${kind === "face" ? "-face" : ""}.png`;
+/** <dir>/A-fb.png (стенд дээрх танилцуулга), <dir>/A-fb-face.png (хэвлэх нүүр) */
+export const mockupPath = (dir: string, key: DesignKey, platform: Platform, kind: "preview" | "face") =>
+  `${dir}/${key}-${platform}${kind === "face" ? "-face" : ""}.png`;
 
-export const adminUrl = (siteUrl: string, id: string) => `${siteUrl.replace(/\/+$/, "")}/admin/custom/${id}`;
+/** Хүсэлтийн хувилбарууд — загвар бүрт өгсөн платформ бүр (FB, IG дарааллаар) */
+export const requestPlatforms = (req: Pick<CustomRequest, "fb_url" | "ig_url">): Platform[] =>
+  variants(req.fb_url, req.ig_url).map((v) => v.platform);
+
+export const PLATFORM_LABEL: Record<Platform, string> = { fb: "Facebook", ig: "Instagram" };
+
+// Түлхүүр URL-д ХЭЗЭЭ Ч орохгүй — админ cookie-оор нэвтэрнэ (/admin/login)
+export const adminUrl = (base: string, id: string) => `${base.replace(/\/+$/, "")}/admin/custom/${id}`;
 
 export type MockupDeps = {
   db: CustomDb;
   render: (req: CustomRequest, logo: Uint8Array, set: number) => Promise<RenderedDesign[]>;
-  notify: (req: CustomRequest, designs: RenderedDesign[], set: number) => Promise<void>;
+  notify: (req: CustomRequest, designs: RenderedDesign[], set: number, siteUrl: string) => Promise<void>;
   sendEmail: typeof sendEmail;
   alert: typeof alert;
   autoSend: boolean;
+  /** Линкийн суурь — production: taplymn.com, preview: тухайн deployment (lib/site.ts) */
   siteUrl: string;
   newDir: () => string;
 };
@@ -38,7 +47,7 @@ export const defaultMockupDeps = (): MockupDeps => ({
   sendEmail,
   alert,
   autoSend: env().MOCKUP_AUTO_SEND,
-  siteUrl: env().NEXT_PUBLIC_SITE_URL,
+  siteUrl: siteUrl(),
   newDir: randomUUID,
 });
 
@@ -73,8 +82,8 @@ export async function runMockups({ req, set }: Claimed, deps: MockupDeps = defau
     designs = await deps.render(req, logo, set);
     dir = deps.newDir();
     for (const d of designs) {
-      await deps.db.uploadMockup(mockupPath(dir, d.key, "preview"), d.preview);
-      await deps.db.uploadMockup(mockupPath(dir, d.key, "face"), d.face);
+      await deps.db.uploadMockup(mockupPath(dir, d.key, d.platform, "preview"), d.preview);
+      await deps.db.uploadMockup(mockupPath(dir, d.key, d.platform, "face"), d.face);
     }
     if (!(await deps.db.finishGeneration(id, set, dir))) return "skipped"; // шинэ үүсгэлт давж гарсан
   } catch (e) {
@@ -85,7 +94,7 @@ export async function runMockups({ req, set }: Claimed, deps: MockupDeps = defau
 
   const ready = { ...req, status: "awaiting_approval" as const, design_set: set, mockup_dir: dir };
   try {
-    await deps.notify(ready, designs, set);
+    await deps.notify(ready, designs, set, deps.siteUrl);
   } catch (e) {
     await deps.alert("Custom загвар Telegram", req.business_name, e);
   }
@@ -104,9 +113,14 @@ export async function sendMockupEmail(id: string, deps: MockupDeps = defaultMock
 
   const labels = designSet(req.design_set);
   const dir = req.mockup_dir;
+  const platforms = requestPlatforms(req);
   const mail = mockupEmail(
     req,
-    DESIGN_KEYS.map((k) => ({ key: k, label: labels[k].label, imageUrl: deps.db.mockupUrl(mockupPath(dir, k, "preview")) })),
+    DESIGN_KEYS.map((k) => ({
+      key: k,
+      label: labels[k].label,
+      images: platforms.map((p) => ({ platform: PLATFORM_LABEL[p], url: deps.db.mockupUrl(mockupPath(dir, k, p, "preview")) })),
+    })),
     deps.siteUrl,
   );
   try {
@@ -119,24 +133,22 @@ export async function sendMockupEmail(id: string, deps: MockupDeps = defaultMock
   }
 }
 
-/** Telegram: 3 танилцуулах зураг нэг цомогт + "Админ хуудас" товчтой мессеж. */
-async function notifyMockups(req: CustomRequest, designs: RenderedDesign[], set: number): Promise<void> {
+/** Telegram: танилцуулах зургууд нэг цомогт (3 эсвэл 6, ≤10) + "Админ хуудас" товчтой мессеж. */
+async function notifyMockups(req: CustomRequest, designs: RenderedDesign[], set: number, base: string): Promise<void> {
   const e = escapeHtml;
-  const link = req.fb_url ?? req.ig_url;
+  const keys = DESIGN_KEYS.map((k) => `${k} — ${e(designs.find((d) => d.key === k)?.label ?? "")}`).join(" · ");
+  const platforms = [...new Set(designs.map((d) => d.platform))];
   const caption = [
     `🟣 <b>CUSTOM ЗАГВАР</b> · ${e(req.business_name)} · багц ${set}`,
-    designs.map((d) => `${d.key} — ${e(d.label)}`).join(" · "),
-    link ? `QR: ${e(displayLink(link))} ✓` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+    keys,
+    `QR шалгасан ✓ · ${platforms.map((p) => PLATFORM_LABEL[p]).join(" + ")}`,
+  ].join("\n");
   await sendTelegramMediaGroup(
-    designs.map((d) => ({ bytes: d.preview, filename: `${d.key}.png`, type: "image/png" })),
+    designs.map((d) => ({ bytes: d.preview, filename: `${d.key}-${d.platform}.png`, type: "image/png" })),
     caption,
   );
-  const { NEXT_PUBLIC_SITE_URL } = env();
   await sendTelegram(`Шалгаад имэйл илгээнэ үү · ${e(req.business_name)}`, {
     buttonText: "Админ хуудас",
-    buttonUrl: adminUrl(NEXT_PUBLIC_SITE_URL, req.id),
+    buttonUrl: adminUrl(base, req.id),
   });
 }

@@ -7,8 +7,9 @@ import type { PreparedLogo } from "./logo";
 import { decodeQr, qrPng } from "./qr";
 import { PREVIEW, Stand } from "./stand";
 
-// 3 загварыг рендэрлээд QR бүрийг буцааж уншиж шалгана. Таарахгүй бол алдаа шиднэ —
-// дуудагч тал (lib/custom-mockups.ts) status='failed' болгож, имэйл илгээхгүй.
+// 3 загварыг платформ бүрээр (FB, IG — өгсөн нь) рендэрлээд QR бүрийг буцааж уншиж шалгана.
+// FB+IG хоёулаа бол загвар бүр 2 хувилбартай: бүтэц ижил, зөвхөн дүрс + QR өөр.
+// QR таарахгүй бол алдаа шиднэ — дуудагч тал (lib/custom-mockups.ts) status='failed' болгож, имэйл илгээхгүй.
 
 export type RenderInput = {
   name: string;
@@ -19,16 +20,19 @@ export type RenderInput = {
   set: number;
 };
 
-export type RenderedDesign = { key: DesignKey; label: string; face: Buffer; preview: Buffer };
+export type Platform = "fb" | "ig";
+export type RenderedDesign = { key: DesignKey; platform: Platform; url: string; label: string; face: Buffer; preview: Buffer };
 
 export class QrMismatchError extends Error {}
 
-/** QR-д орох линк: FB өгсөн бол FB, үгүй бол IG */
-export const qrTarget = (fbUrl: string | null, igUrl: string | null) => {
-  const url = fbUrl ?? igUrl;
-  if (!url) throw new Error("FB эсвэл IG линк байхгүй");
-  return url;
-};
+/** Өгсөн платформууд дарааллаар (FB, IG) — хувилбар бүрийн QR линк */
+export function variants(fbUrl: string | null, igUrl: string | null): { platform: Platform; url: string }[] {
+  const out: { platform: Platform; url: string }[] = [];
+  if (fbUrl) out.push({ platform: "fb", url: fbUrl });
+  if (igUrl) out.push({ platform: "ig", url: igUrl });
+  if (out.length === 0) throw new Error("FB эсвэл IG линк байхгүй");
+  return out;
+}
 
 const dataUri = (png: Buffer) => `data:image/png;base64,${png.toString("base64")}`;
 
@@ -39,33 +43,32 @@ async function toPng(el: ReactElement, width: number, height: number): Promise<B
 }
 
 export async function renderDesigns(input: RenderInput): Promise<RenderedDesign[]> {
-  const url = qrTarget(input.fbUrl, input.igUrl);
-  const qr = await qrPng(url, QR_MAX);
-  const face: FaceInput = {
-    name: input.name,
-    logo: {
-      src: dataUri(input.logo.png),
-      width: input.logo.width,
-      height: input.logo.height,
-      transparent: input.logo.transparent,
-      lightness: input.logo.lightness,
-    },
-    qr: { src: dataUri(qr.png), size: qr.size },
-    platforms: [...(input.fbUrl ? (["fb"] as const) : []), ...(input.igUrl ? (["ig"] as const) : [])],
-    brand: input.logo.brand,
+  const logo: FaceInput["logo"] = {
+    src: dataUri(input.logo.png),
+    width: input.logo.width,
+    height: input.logo.height,
+    transparent: input.logo.transparent,
+    lightness: input.logo.lightness,
   };
+  const qrs = await Promise.all(
+    variants(input.fbUrl, input.igUrl).map(async (v) => ({ ...v, qr: await qrPng(v.url, QR_MAX) })),
+  );
 
   const set = designSet(input.set);
   const out: RenderedDesign[] = [];
   for (const key of DESIGN_KEYS) {
     const d = set[key];
-    const facePng = await toPng(d.render(face), FACE_W, FACE_H);
-    const preview = await toPng(<Stand face={dataUri(facePng)} />, PREVIEW, PREVIEW);
-    for (const [what, img] of [["нүүр", facePng], ["танилцуулга", preview]] as const) {
-      const got = await decodeQr(img, what === "нүүр" ? FACE_H : PREVIEW);
-      if (got !== url) throw new QrMismatchError(`Загвар ${key} (${what}): QR уншигдсангүй эсвэл линк таарахгүй`);
+    for (const { platform, url, qr } of qrs) {
+      const face: FaceInput = { name: input.name, logo, qr: { src: dataUri(qr.png), size: qr.size }, platforms: [platform], brand: input.logo.brand };
+      const facePng = await toPng(d.render(face), FACE_W, FACE_H);
+      const preview = await toPng(<Stand face={dataUri(facePng)} />, PREVIEW, PREVIEW);
+      // QR бүрийг яг тэр платформын линктэй тулгана
+      for (const [what, img] of [["нүүр", facePng], ["танилцуулга", preview]] as const) {
+        const got = await decodeQr(img, what === "нүүр" ? FACE_H : PREVIEW);
+        if (got !== url) throw new QrMismatchError(`Загвар ${key}-${platform} (${what}): QR уншигдсангүй эсвэл линк таарахгүй`);
+      }
+      out.push({ key, platform, url, label: d.label, face: facePng, preview });
     }
-    out.push({ key, label: d.label, face: facePng, preview });
   }
   return out;
 }

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { fitSize, wrapLines } from "./designs";
 import { prepareLogo } from "./logo";
 import { decodeQr } from "./qr";
-import { qrTarget, renderDesigns } from "./render";
+import { renderDesigns, variants } from "./render";
 
 // MOCKUP_SAMPLES=<хавтас> тохируулбал жишээ зургуудыг тэнд хадгална (нүдээр шалгахад).
 const SAMPLES = process.env.MOCKUP_SAMPLES;
@@ -73,36 +73,39 @@ describe("fitSize", () => {
   });
 });
 
-describe("qrTarget", () => {
-  it("FB тэргүүлнэ, байхгүй бол IG", () => {
-    expect(qrTarget("fb", "ig")).toBe("fb");
-    expect(qrTarget(null, "ig")).toBe("ig");
-    expect(() => qrTarget(null, null)).toThrow();
+describe("variants", () => {
+  it("өгсөн платформ бүр нэг хувилбар (FB, IG дарааллаар)", () => {
+    expect(variants("f", "i")).toEqual([{ platform: "fb", url: "f" }, { platform: "ig", url: "i" }]);
+    expect(variants(null, "i")).toEqual([{ platform: "ig", url: "i" }]);
+    expect(() => variants(null, null)).toThrow();
   });
 });
 
 describe("renderDesigns", () => {
   for (const c of CASES) {
     for (const set of [1, 2]) {
-      it(`${c.id} · багц ${set}: 3 загвар, хэмжээ зөв, QR линктэй таарна`, async () => {
+      it(`${c.id} · багц ${set}: 3 загвар × платформ, хэмжээ зөв, QR линктэй таарна`, async () => {
         const logo = await prepareLogo(await c.logo());
         const out = await renderDesigns({ name: c.name, logo, fbUrl: c.fb, igUrl: c.ig, set });
-        expect(out.map((d) => d.key)).toEqual(["A", "B", "C"]);
+        const platforms = [...(c.fb ? ["fb"] : []), ...(c.ig ? ["ig"] : [])];
+        // загвар бүр × өгсөн платформ бүр
+        expect(out.map((d) => `${d.key}-${d.platform}`)).toEqual(["A", "B", "C"].flatMap((k) => platforms.map((p) => `${k}-${p}`)));
         for (const d of out) {
           const fm = await sharp(d.face).metadata();
           expect([fm.width, fm.height]).toEqual([1200, 1400]);
           const pm = await sharp(d.preview).metadata();
           expect([pm.width, pm.height]).toEqual([1600, 1600]);
-          expect(await decodeQr(d.face)).toBe(c.fb ?? c.ig);
+          // QR нь яг тухайн платформын линк
+          expect(await decodeQr(d.face)).toBe(d.platform === "fb" ? c.fb : c.ig);
           if (SAMPLES) {
             mkdirSync(SAMPLES, { recursive: true });
-            writeFileSync(path.join(SAMPLES, `${c.id}-s${set}-${d.key}-face.png`), d.face);
-            writeFileSync(path.join(SAMPLES, `${c.id}-s${set}-${d.key}-stand.png`), d.preview);
+            writeFileSync(path.join(SAMPLES, `${c.id}-s${set}-${d.key}-${d.platform}-face.png`), d.face);
+            writeFileSync(path.join(SAMPLES, `${c.id}-s${set}-${d.key}-${d.platform}-stand.png`), d.preview);
           }
         }
-        // Багц доторх 3 загвар бие биеэсээ ялгаатай
-        expect(new Set(out.map((d) => d.face.toString("base64"))).size).toBe(3);
-      }, 60_000);
+        // Бүх хувилбар бие биеэсээ ялгаатай
+        expect(new Set(out.map((d) => d.face.toString("base64"))).size).toBe(out.length);
+      }, 120_000);
     }
   }
 });

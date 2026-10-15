@@ -10,9 +10,9 @@ export function isAdminKey(given: unknown): boolean {
   return timingSafeEqual(a, b);
 }
 
-// Админ cookie: /admin/login?key=ADMIN_KEY нэг удаа нээхэд тавигдана (iPhone дээр 180 хоног).
-// Cookie-д ADMIN_KEY өөрөө биш, түүнээс гаргасан HMAC хадгална. Ингэснээр Telegram-ийн
-// "Админ хуудас" товчинд түлхүүр оруулах шаардлагагүй.
+// Админ cookie: /admin/login хуудсанд түлхүүрээ нэг удаа бичихэд (POST) тавигдана (iPhone дээр 180 хоног).
+// Түлхүүр URL-д огт орохгүй — Vercel-ийн request log, Telegram, браузерын түүхэнд үлдэхгүй.
+// Cookie-д ADMIN_KEY өөрөө биш, түүнээс гаргасан HMAC хадгална.
 export const ADMIN_COOKIE = "taply_admin";
 export const ADMIN_COOKIE_MAX_AGE = 180 * 24 * 60 * 60;
 
@@ -23,8 +23,8 @@ export function isAdminCookie(given: unknown): boolean {
   return timingSafeEqual(Buffer.from(given), Buffer.from(adminCookieValue()));
 }
 
-/** ?key= / form-ын key эсвэл cookie — аль нэг нь зөв бол админ. */
-export const isAdmin = (key: unknown, cookie: unknown) => isAdminKey(key) || isAdminCookie(cookie);
+// Түлхүүрээр нэвтрэх оролдлого: IP-ээр 10/цаг
+export const ADMIN_LOGIN_LIMIT = { bucket: "admin_login_ip", limit: 10, window: "1 hour" } as const;
 
 // Нуугдмал тест бүтээгдэхүүн — бодит Wire төлбөрийг 100₮-өөр шалгахад.
 // Зөвхөн ?key=ADMIN_KEY-тэй үед харагдана, сервер мөн key-г шалгана.

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { ADMIN_COOKIE, isAdmin } from "@/lib/admin";
+import { ADMIN_COOKIE, isAdminCookie } from "@/lib/admin";
 import { ADMIN_MESSAGES, type AdminMessage } from "@/lib/admin-action";
 import { customDb, type CustomStatus } from "@/lib/custom-db";
-import { mockupPath } from "@/lib/custom-mockups";
+import { mockupPath, PLATFORM_LABEL, requestPlatforms } from "@/lib/custom-mockups";
 import { isUuid } from "@/lib/db";
 import { displayLink } from "@/lib/links";
 import { DESIGN_KEYS, designSet } from "@/lib/mockups/designs";
@@ -36,8 +36,8 @@ export default async function AdminCustomPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [{ id }, sp, jar] = await Promise.all([params, searchParams, cookies()]);
-  const key = typeof sp.key === "string" ? sp.key : null;
-  if (!isUuid(id) || !isAdmin(key, jar.get(ADMIN_COOKIE)?.value)) notFound();
+  // Зөвхөн cookie (/admin/login-оор нэвтэрсэн) — түлхүүр URL-д хэзээ ч орохгүй
+  if (!isUuid(id) || !isAdminCookie(jar.get(ADMIN_COOKIE)?.value)) notFound();
 
   const req = await customDb.getCustomRequest(id);
   if (!req) notFound();
@@ -52,7 +52,9 @@ export default async function AdminCustomPage({
   const showDesigns = dir && labels && req.status !== "generating";
   const canSend = req.status === "awaiting_approval" && !!dir;
   const canRegen = !!req.logo_path && req.status !== "chosen" && req.status !== "generating";
-  const keyField = key ? <input type="hidden" name="key" value={key} /> : null;
+  // FB+IG хоёулаа бол таб: ?p=fb | ?p=ig
+  const platforms = requestPlatforms(req);
+  const platform = platforms.find((p) => p === sp.p) ?? platforms[0];
 
   return (
     <main className="min-h-screen bg-white px-4 pb-24 pt-8 text-ink sm:px-8">
@@ -70,13 +72,11 @@ export default async function AdminCustomPage({
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             {canSend && (
               <form method="post" action={`/api/admin/custom/${req.id}/send`}>
-                {keyField}
                 <button className={`${btn} bg-ink text-white`}>Имэйл илгээх</button>
               </form>
             )}
             {canRegen && (
               <form method="post" action={`/api/admin/custom/${req.id}/regenerate`}>
-                {keyField}
                 <button className={`${btn} border-[1.5px] border-ink`}>Дахин үүсгэх</button>
               </form>
             )}
@@ -86,17 +86,32 @@ export default async function AdminCustomPage({
           <p className="mb-0 mt-3 text-sm text-mute">“Дахин үүсгэх” дарвал шинэ загварыг дахин имэйлээр илгээх хэрэгтэй болно.</p>
         )}
 
+        {showDesigns && platforms.length > 1 && (
+          <nav className="mt-10 flex gap-2" aria-label="Платформ">
+            {platforms.map((p) => (
+              <a
+                key={p}
+                href={`?p=${p}`}
+                aria-current={p === platform ? "page" : undefined}
+                className={`inline-flex min-h-12 items-center rounded-full px-6 text-[15px] font-bold ${p === platform ? "bg-ink text-white" : "border-[1.5px] border-ink"}`}
+              >
+                {PLATFORM_LABEL[p]}
+              </a>
+            ))}
+          </nav>
+        )}
+
         {showDesigns && (
-          <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
             {DESIGN_KEYS.map((k) => (
               <figure key={k} className="m-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={customDb.mockupUrl(mockupPath(dir, k, "preview"))} alt={`Загвар ${k}`} className="block aspect-square w-full rounded-md bg-[#e2e2e2]" />
+                <img src={customDb.mockupUrl(mockupPath(dir, k, platform, "preview"))} alt={`Загвар ${k} · ${PLATFORM_LABEL[platform]}`} className="block aspect-square w-full rounded-md bg-[#e2e2e2]" />
                 <figcaption className="mt-3 flex items-baseline justify-between gap-3">
                   <span className="text-[15px] font-bold">
                     {k} · {labels[k].label}
                   </span>
-                  <a href={customDb.mockupUrl(mockupPath(dir, k, "face"))} target="_blank" rel="noreferrer" className="min-h-11 py-2 text-sm font-semibold underline">
+                  <a href={customDb.mockupUrl(mockupPath(dir, k, platform, "face"))} target="_blank" rel="noreferrer" className="min-h-11 py-2 text-sm font-semibold underline">
                     Хэвлэх нүүр
                   </a>
                 </figcaption>

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./env", () => ({ env: () => ({ NEXT_PUBLIC_SITE_URL: "https://taplymn.com", MOCKUP_AUTO_SEND: false }) }));
-vi.mock("./mockups/render", () => ({ renderDesigns: async () => [] }));
+vi.mock("./mockups/render", async (orig) => ({ ...(await orig<typeof import("./mockups/render")>()), renderDesigns: async () => [] }));
 
 import type { CustomDb, CustomRequest } from "./custom-db";
 import { mockupEmail } from "./custom-email";
@@ -34,6 +34,8 @@ const baseReq: CustomRequest = {
 
 const designs: RenderedDesign[] = (["A", "B", "C"] as const).map((key) => ({
   key,
+  platform: "fb",
+  url: "https://www.facebook.com/nomin",
   label: key,
   face: Buffer.from(`face-${key}`),
   preview: Buffer.from(`preview-${key}`),
@@ -45,7 +47,7 @@ function setup(over: Partial<MockupDeps> = {}, reqOver: Partial<CustomRequest> =
   const uploads: string[] = [];
   const alerts: string[] = [];
   const emails: { to: string; subject: string; idempotencyKey: string }[] = [];
-  const notified: number[] = [];
+  const notified: string[] = [];
   const db: Partial<CustomDb> = {
     getCustomRequest: async () => ({ ...row }),
     downloadLogo: async () => new Uint8Array([1]),
@@ -76,7 +78,7 @@ function setup(over: Partial<MockupDeps> = {}, reqOver: Partial<CustomRequest> =
   const deps: MockupDeps = {
     db: db as CustomDb,
     render: async () => designs,
-    notify: async (_r, _d, set) => void notified.push(set),
+    notify: async (_r, _d, set, base) => void notified.push(`${set}@${base}`),
     sendEmail: async (p) => void emails.push(p),
     alert: async (where) => void alerts.push(where),
     autoSend: false,
@@ -92,8 +94,8 @@ describe("generateMockups", () => {
     const s = setup();
     expect(await generateMockups(ID, "initial", s.deps)).toBe("done");
     expect(s.row).toMatchObject({ status: "awaiting_approval", design_set: 1, mockup_dir: "dir-1" });
-    expect(s.uploads).toEqual(["dir-1/A.png", "dir-1/A-face.png", "dir-1/B.png", "dir-1/B-face.png", "dir-1/C.png", "dir-1/C-face.png"]);
-    expect(s.notified).toEqual([1]);
+    expect(s.uploads).toEqual(["dir-1/A-fb.png", "dir-1/A-fb-face.png", "dir-1/B-fb.png", "dir-1/B-fb-face.png", "dir-1/C-fb.png", "dir-1/C-fb-face.png"]);
+    expect(s.notified).toEqual(["1@https://taplymn.com"]); // siteUrl нь deps-ээс (preview бол тухайн хаяг)
     expect(s.emails).toHaveLength(0);
   });
 
@@ -167,8 +169,27 @@ describe("sendMockupEmail", () => {
 });
 
 describe("mockupEmail", () => {
-  const imgs = (["A", "B", "C"] as const).map((key) => ({ key, label: `L${key}`, imageUrl: `https://cdn/${mockupPath("d", key, "preview")}` }));
-  const mail = mockupEmail(baseReq, imgs, "https://taplymn.com/");
+  const one = (["A", "B", "C"] as const).map((key) => ({
+    key,
+    label: `L${key}`,
+    images: [{ platform: "Facebook", url: `https://cdn/${mockupPath("d", key, "fb", "preview")}` }],
+  }));
+  const mail = mockupEmail(baseReq, one, "https://taplymn.com/");
+
+  it("FB+IG: загвар бүрт хоёр зураг зэрэгцээ, сонгох товч загвар бүрт нэг", () => {
+    const both = (["A", "B", "C"] as const).map((key) => ({
+      key,
+      label: `L${key}`,
+      images: (["fb", "ig"] as const).map((p) => ({ platform: p === "fb" ? "Facebook" : "Instagram", url: `https://cdn/${mockupPath("d", key, p, "preview")}` })),
+    }));
+    const m = mockupEmail(baseReq, both, "https://taplymn.com");
+    expect(m.html).toContain("https://cdn/d/A-fb.png");
+    expect(m.html).toContain("https://cdn/d/A-ig.png");
+    expect(m.html.match(/<img /g)).toHaveLength(6);
+    expect(m.html.match(/>Энийг сонгох<\/a>/g)).toHaveLength(3);
+    expect(m.html).toContain("Facebook, Instagram гэсэн хоёр хувилбартай");
+    expect(mail.html).not.toContain("хоёр хувилбартай");
+  });
 
   it("гарчиг, сонгох холбоос, утас", () => {
     expect(mail.subject).toBe("TAPLY — Номин <Бутик>-ийн 3 загвар бэлэн боллоо");

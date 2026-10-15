@@ -1,8 +1,12 @@
 import type { ReactElement } from "react";
+import sharp from "sharp";
 import { FACE_H, FACE_W } from "./designs";
 
 // Танилцуулах зураг 1600×1600: хэвлэх нүүрийг урдаас харсан L хэлбэрийн стенд дээр,
 // саарал дэвсгэр, зөөлөн сүүдэр. Бодит product зураг (өнцөгтэй) ашиглахгүй.
+//
+// Хурдны тулд: дэвсгэр + суурь + сүүдрийг нэг удаа (instance тус бүрд) satori-гоор зурж кэшлээд,
+// нүүр бүрийг sharp-аар багасгаж, булангийн радиустай тайрч дээр нь тавина.
 
 export const PREVIEW = 1600;
 
@@ -26,7 +30,8 @@ const base = () => {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 };
 
-export function Stand({ face }: { face: string }): ReactElement {
+/** Нүүргүй дэвсгэр: саарал, ширээний сүүдэр, суурь, нүүрний сүүдэр (нүүр байх газар цагаан). */
+export function StandBackground(): ReactElement {
   return (
     <div
       style={{
@@ -60,13 +65,28 @@ export function Stand({ face }: { face: string }): ReactElement {
           height: H,
           display: "flex",
           borderRadius: RADIUS,
-          overflow: "hidden",
+          background: "#ffffff",
           boxShadow: "0 28px 50px rgba(0,0,0,0.16), 0 4px 10px rgba(0,0,0,0.10)",
         }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={face} width={W} height={H} alt="" />
-      </div>
+      />
     </div>
   );
+}
+
+const ROUND_MASK = Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect width="${W}" height="${H}" rx="${RADIUS}" ry="${RADIUS}"/></svg>`,
+);
+
+/** Кэшлэсэн дэвсгэр дээр нүүрийг (R3.18 булантай) тавина. */
+export async function composeStand(background: Buffer, face: Buffer): Promise<Buffer> {
+  const small = await sharp(face)
+    .resize(W, H, { kernel: "lanczos3" })
+    .ensureAlpha()
+    .composite([{ input: ROUND_MASK, blend: "dest-in" }])
+    .png()
+    .toBuffer();
+  return sharp(background)
+    .composite([{ input: small, top: TOP, left: LEFT }])
+    .png({ compressionLevel: 6 })
+    .toBuffer();
 }

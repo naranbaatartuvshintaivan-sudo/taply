@@ -81,10 +81,13 @@ export async function runMockups({ req, set }: Claimed, deps: MockupDeps = defau
     const logo = await deps.db.downloadLogo(req.logo_path);
     designs = await deps.render(req, logo, set);
     dir = deps.newDir();
-    for (const d of designs) {
-      await deps.db.uploadMockup(mockupPath(dir, d.key, d.platform, "preview"), d.preview);
-      await deps.db.uploadMockup(mockupPath(dir, d.key, d.platform, "face"), d.face);
-    }
+    // Зэрэг upload (6 хувилбар = 12 файл) — дарааллаар бол Vercel-ийн 60 секундэд багтахгүй байсан
+    await Promise.all(
+      designs.flatMap((d) => [
+        deps.db.uploadMockup(mockupPath(dir, d.key, d.platform, "preview"), d.preview),
+        deps.db.uploadMockup(mockupPath(dir, d.key, d.platform, "face"), d.face),
+      ]),
+    );
     if (!(await deps.db.finishGeneration(id, set, dir))) return "skipped"; // шинэ үүсгэлт давж гарсан
   } catch (e) {
     await deps.db.failGeneration(id, set).catch(() => {});

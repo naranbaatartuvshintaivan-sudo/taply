@@ -5,7 +5,7 @@ import { DESIGN_KEYS, designSet, FACE_H, FACE_W, QR_MAX, type DesignKey, type Fa
 import { fonts } from "./fonts";
 import type { PreparedLogo } from "./logo";
 import { decodeQr, qrPng } from "./qr";
-import { PREVIEW, Stand } from "./stand";
+import { composeStand, PREVIEW, StandBackground } from "./stand";
 
 // 3 загварыг платформ бүрээр (FB, IG — өгсөн нь) рендэрлээд QR бүрийг буцааж уншиж шалгана.
 // FB+IG хоёулаа бол загвар бүр 2 хувилбартай: бүтэц ижил, зөвхөн дүрс + QR өөр.
@@ -39,8 +39,16 @@ const dataUri = (png: Buffer) => `data:image/png;base64,${png.toString("base64")
 async function toPng(el: ReactElement, width: number, height: number): Promise<Buffer> {
   const res = new ImageResponse(el, { width, height, fonts: fonts() });
   const raw = Buffer.from(await res.arrayBuffer());
-  return sharp(raw).png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
+  return sharp(raw).png({ compressionLevel: 6 }).toBuffer();
 }
+
+// Стендийн дэвсгэр өөрчлөгддөггүй — instance тус бүрд нэг л удаа зурна
+let standBg: Promise<Buffer> | null = null;
+const standBackground = () => (standBg ??= toPng(<StandBackground />, PREVIEW, PREVIEW).catch((e) => ((standBg = null), Promise.reject(e))));
+
+// QR унших хэмжээ: нүүр 1000px (QR ≈ 330px), танилцуулга 1100px (QR ≈ 200px) — хангалттай, хурдан
+const DECODE_FACE = 1000;
+const DECODE_PREVIEW = 1100;
 
 export async function renderDesigns(input: RenderInput): Promise<RenderedDesign[]> {
   const logo: FaceInput["logo"] = {
@@ -55,20 +63,21 @@ export async function renderDesigns(input: RenderInput): Promise<RenderedDesign[
   );
 
   const set = designSet(input.set);
-  const out: RenderedDesign[] = [];
-  for (const key of DESIGN_KEYS) {
-    const d = set[key];
-    for (const { platform, url, qr } of qrs) {
+  const bg = await standBackground();
+  // Хувилбар бүрийг зэрэг: satori (JS) ажиллах зуур sharp (libuv thread) нь өмнөхийг боловсруулна
+  const jobs = DESIGN_KEYS.flatMap((key) =>
+    qrs.map(async ({ platform, url, qr }): Promise<RenderedDesign> => {
+      const d = set[key];
       const face: FaceInput = { name: input.name, logo, qr: { src: dataUri(qr.png), size: qr.size }, platforms: [platform], brand: input.logo.brand };
       const facePng = await toPng(d.render(face), FACE_W, FACE_H);
-      const preview = await toPng(<Stand face={dataUri(facePng)} />, PREVIEW, PREVIEW);
+      const preview = await composeStand(bg, facePng);
       // QR бүрийг яг тэр платформын линктэй тулгана
-      for (const [what, img] of [["нүүр", facePng], ["танилцуулга", preview]] as const) {
-        const got = await decodeQr(img, what === "нүүр" ? FACE_H : PREVIEW);
+      for (const [what, img, side] of [["нүүр", facePng, DECODE_FACE], ["танилцуулга", preview, DECODE_PREVIEW]] as const) {
+        const got = await decodeQr(img, side);
         if (got !== url) throw new QrMismatchError(`Загвар ${key}-${platform} (${what}): QR уншигдсангүй эсвэл линк таарахгүй`);
       }
-      out.push({ key, platform, url, label: d.label, face: facePng, preview });
-    }
-  }
-  return out;
+      return { key, platform, url, label: d.label, face: facePng, preview };
+    }),
+  );
+  return Promise.all(jobs);
 }

@@ -4,7 +4,7 @@ vi.mock("next/server", () => ({ after: (fn: () => unknown) => void fn() }));
 vi.mock("./env", () => ({ env: () => ({}) }));
 
 import type { Db, Order, Payment } from "./db";
-import { deliverNotifications, markPaid, retryCheckout, type Deps } from "./fulfil";
+import { deliverNotifications, markPaid, retryCheckout, voidIntents, type Deps } from "./fulfil";
 import { handleWireWebhook } from "./webhook";
 import { signWirePayload } from "./wire-signature";
 import type { PaymentIntent } from "./wire";
@@ -454,17 +454,52 @@ describe("custom захиалга төлөгдөхөд", () => {
     expect(s.orders.get(ORDER_ID)!.notified_at).not.toBeNull();
   });
 
-  it("нэг хүсэлтэд өөр захиалга аль хэдийн төлөгдсөн (unique 23505) → paid болохгүй, ⚠️ Давхар төлбөр, мэдэгдэлгүй", async () => {
+  it("нэг хүсэлтэд өөр захиалга төлөгдсөн (unique 23505) → paid болохгүй, payments 'succeeded' хадгалагдана, ⚠️ НЭГ удаа", async () => {
     const s = customSetup();
     s.deps.db.markOrderPaid = async () => {
       throw new Error('DB markOrderPaid: 23505 duplicate key value violates unique constraint "orders_one_paid_per_custom_request"');
     };
-    const r = await markPaid(ORDER_ID, "pi_one", s.deps);
+    // webhook давтан ирсэн, reconcile — 3 дуудалт
+    for (let i = 0; i < 3; i++) expect(await markPaid(ORDER_ID, "pi_one", s.deps)).toEqual({ status: "pending_payment", newlyPaid: false });
     await s.flush();
-    expect(r).toEqual({ status: "pending_payment", newlyPaid: false });
-    expect(s.alert).toHaveBeenCalledWith("Давхар төлбөр", "TP-1042", expect.any(Error));
-    expect(s.telegram).not.toHaveBeenCalled();
+    expect(s.payments.find((p) => p.payment_intent_id === "pi_one")!.status).toBe("succeeded");
+    expect(s.telegram).toHaveBeenCalledTimes(1);
+    expect((s.telegram.mock.calls[0] as unknown as [string])[0]).toContain("ДАВХАР/ХУУЧИН ЗАХИАЛГЫН ТӨЛБӨР</b> TP-1042 — буцаалт/гараар шалгах");
     expect(s.chosen).toEqual([]);
+    expect(s.media).not.toHaveBeenCalled();
+  });
+
+  it("цуцлагдсан (сольсон) захиалгын хуучин intent төлөгдвөл: canceled хэвээр, payments 'succeeded', ⚠️ НЭГ удаа", async () => {
+    const s = customSetup();
+    s.orders.get(ORDER_ID)!.status = "canceled";
+    for (let i = 0; i < 3; i++) await markPaid(ORDER_ID, "pi_one", s.deps);
+    await s.flush();
+    expect(s.orders.get(ORDER_ID)!.status).toBe("canceled");
+    expect(s.payments.find((p) => p.payment_intent_id === "pi_one")!.status).toBe("succeeded");
+    expect(s.telegram).toHaveBeenCalledTimes(1);
+    expect((s.telegram.mock.calls[0] as unknown as [string])[0]).toContain("ДАВХАР/ХУУЧИН ЗАХИАЛГЫН ТӨЛБӨР");
+  });
+
+  it("⚠️ илгээж чадаагүй бол дараагийн дуудалтад дахин оролдоно", async () => {
+    const s = customSetup();
+    s.orders.get(ORDER_ID)!.status = "canceled";
+    s.telegram.mockRejectedValueOnce(new Error("tg down"));
+    await markPaid(ORDER_ID, "pi_one", s.deps);
+    await markPaid(ORDER_ID, "pi_one", s.deps);
+    expect(s.telegram).toHaveBeenCalledTimes(2);
+    expect(s.alert).toHaveBeenCalledWith("Хуучин захиалгын төлбөр", "TP-1042", expect.any(Error));
+  });
+
+  it("voidIntents: Wire cancel алдаа → ⚠️, throw хийхгүй, бусдыг үргэлжлүүлнэ", async () => {
+    const s = setup();
+    s.payments.push({ id: "p2", order_id: ORDER_ID, payment_intent_id: "pi_two", attempt: 2, status: "requires_payment_method", amount: 1, livemode: true, created_at: "" });
+    s.deps.wire.cancelPaymentIntent = vi.fn(async (id: string) => {
+      if (id === "pi_one") throw new Error("wire 500");
+      return { ...s.mkPi(id, "canceled") };
+    });
+    await expect(voidIntents(ORDER_ID, s.deps)).resolves.toBeUndefined();
+    expect(s.alert).toHaveBeenCalledWith("Wire intent цуцлах", "pi_one", expect.any(Error));
+    expect(s.payments.find((p) => p.payment_intent_id === "pi_two")!.status).toBe("canceled");
   });
 
   it("энгийн захиалгад custom deps байсан ч custom салбар ажиллахгүй", async () => {

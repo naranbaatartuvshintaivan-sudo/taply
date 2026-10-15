@@ -140,6 +140,46 @@ export async function cancelOpenIntents(
   return { kind: "ok", payments };
 }
 
+/**
+ * Захиалгад тооцогдоогүй төлбөр (цуцлагдсан захиалгын хуучин intent, эсвэл нэг custom хүсэлтэд
+ * хоёр дахь төлбөр). Telegram ⚠️ НЭГ л удаа — webhook_events-ийн "orphan-paid:<intent>" мөрөөр
+ * (instance хооронд ч) давхардлыг хаана. Илгээж чадаагүй бол мөрийг арилгаж дараа дахин оролдоно.
+ */
+async function orphanPayment(order: Pick<Order, "code">, pi: { id: string; amount: number }, deps: Deps): Promise<void> {
+  const key = `orphan-paid:${pi.id}`;
+  if (!(await deps.db.recordWebhookEvent(key, "orphan_paid"))) return;
+  try {
+    await deps.telegram(
+      `⚠️ <b>ДАВХАР/ХУУЧИН ЗАХИАЛГЫН ТӨЛБӨР</b> ${escapeHtml(order.code)} — буцаалт/гараар шалгах\n${escapeHtml(pi.id)} · ${fmt(pi.amount)}₮`,
+    );
+  } catch (e) {
+    await deps.db.forgetWebhookEvent(key).catch(() => {});
+    await deps.alert("Хуучин захиалгын төлбөр", order.code, e);
+  }
+}
+
+/**
+ * Цуцлагдсан захиалгын нээлттэй intent-үүдийг Wire дээр цуцлах — best-effort. Алдаа гарвал
+ * лог + ⚠️, дуудагчийг хэзээ ч блоклохгүй (шинэ захиалга аль хэдийн үүссэн).
+ */
+export async function voidIntents(orderId: string, deps: Deps = defaultDeps()): Promise<void> {
+  try {
+    const payments = await deps.db.listPayments(orderId);
+    for (const p of payments) {
+      if (FINAL.has(p.status) || p.status === "processing") continue;
+      try {
+        const pi = await deps.wire.cancelPaymentIntent(p.payment_intent_id);
+        await deps.db.setPaymentStatus(p.payment_intent_id, pi.status);
+      } catch (e) {
+        console.error("[voidIntents]", p.payment_intent_id, (e as Error)?.message);
+        await deps.alert("Wire intent цуцлах", p.payment_intent_id, e);
+      }
+    }
+  } catch (e) {
+    await deps.alert("Wire intent цуцлах", orderId, e);
+  }
+}
+
 // ─── markPaid — webhook, /o/[id], reconcile бүгд үүнийг дуудна ─
 /**
  * Wire-аас PaymentIntent-ийг GET хийж `succeeded`, дүн, metadata таарч байвал
@@ -177,9 +217,10 @@ export async function markPaid(
       won = await deps.db.markOrderPaid(order.id, pi.id);
     } catch (e) {
       // Custom: нэг хүсэлтэд өөр захиалга аль хэдийн төлөгдсөн (unique index 23505). Мөнгө орсон ч
-      // энэ захиалгыг paid болгохгүй — гараар буцаалт хийнэ.
+      // энэ захиалгыг paid болгохгүй — гараар буцаалт. payments мөр дээр setPaymentStatus-аар
+      // (тусдаа бичилт) "succeeded" аль хэдийн хадгалагдсан — RPC-ийн rollback түүнийг арилгахгүй.
       if (order.custom_request_id && /23505/.test(String((e as Error)?.message))) {
-        await deps.alert("Давхар төлбөр", order.code, new Error(`${pi.id} — энэ хүсэлтэд өөр захиалга төлөгдсөн, буцаалт хийх хэрэгтэй`));
+        await orphanPayment(order, pi, deps);
         return { status: order.status, newlyPaid: false };
       }
       throw e;
@@ -193,6 +234,10 @@ export async function markPaid(
     const fresh = await deps.db.getOrder(order.id);
     if (fresh?.paid_payment_intent_id && fresh.paid_payment_intent_id !== pi.id) {
       await deps.alert("Давхар төлбөр", order.code, new Error(`${pi.id} — буцаалт хийх хэрэгтэй`));
+    } else if (fresh?.status === "canceled") {
+      // Цуцлагдсан (жишээ нь custom захиалгыг сольсон) захиалгын хуучин intent төлөгдсөн —
+      // дуугүй алдахгүй: payments мөр "succeeded" хэвээр, ⚠️ нэг удаа
+      await orphanPayment(fresh, pi, deps);
     }
     return { status: fresh?.status ?? order.status, newlyPaid: false };
   }

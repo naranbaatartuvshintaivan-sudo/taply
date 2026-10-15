@@ -45,6 +45,7 @@ const SETS: MockupSet[] = [
 function setup(o: { req?: Partial<CustomRequest> | null; allow?: boolean } = {}) {
   const req = o.req === null ? null : { ...baseReq, ...o.req };
   const orders: Order[] = [];
+  const payments: Awaited<ReturnType<CheckoutDeps["listPayments"]>> = [];
   const calls: string[] = [];
   let seq = 0;
   const telegram = vi.fn(async () => {});
@@ -82,12 +83,14 @@ function setup(o: { req?: Partial<CustomRequest> | null; allow?: boolean } = {})
     },
     startCheckout: async (order) => (calls.push(`checkout:${order.id}`), `https://pay.wire.mn/c/${order.id}`),
     retryCheckout: async (id) => (calls.push(`retry:${id}`), { kind: "redirect", url: `https://pay.wire.mn/c/${id}-retry` }),
-    cancelOpenIntents: async (id) => (calls.push(`cancel:${id}`), { kind: "ok", payments: [] }),
+    syncPaid: async (id) => (calls.push(`sync:${id}`), { status: orders.find((x) => x.id === id)!.status }),
+    listPayments: async () => payments,
+    voidIntents: async (id) => void calls.push(`void:${id}`),
     telegram,
     alert,
     secret: "s".repeat(32),
   };
-  return { deps, orders, calls, telegram, alert };
+  return { deps, orders, calls, telegram, alert, payments };
 }
 
 describe("үнэ (custom хүснэгт, нийт тоогоор)", () => {
@@ -116,10 +119,18 @@ describe("үнэ (custom хүснэгт, нийт тоогоор)", () => {
 
 describe("buildItems", () => {
   const c = { design: "B" as const, set: 1 };
-  it("хоёр платформ: тус бүр ≥0, нийт ≥2; мөр бүр платформ + загвар + багцтай", () => {
-    expect(buildItems(["fb", "ig"], { fb: 1, ig: 0 }, c).ok).toBe(false);
+  it("хоёр платформ: тус бүр ≥0, нийт ≥1 — нэг платформын захиалга зөвшөөрнө", () => {
+    expect(buildItems(["fb", "ig"], { fb: 0, ig: 0 }, c).ok).toBe(false);
+    expect(buildItems(["fb", "ig"], { fb: 0, ig: 1 }, c)).toEqual({
+      ok: true,
+      totalQty: 1,
+      items: [{ sku: "custom_wide", qty: 1, platform: "ig", design: "B", set: 1 }],
+    });
     const r = buildItems(["fb", "ig"], { fb: 2, ig: 0 }, c);
     expect(r).toEqual({ ok: true, totalQty: 2, items: [{ sku: "custom_wide", qty: 2, platform: "fb", design: "B", set: 1 }] });
+  });
+  it("линк өгөөгүй платформын тоог авч үзэхгүй (сервер)", () => {
+    expect(buildItems(["fb"], { fb: 1, ig: 5 }, c)).toMatchObject({ ok: true, totalQty: 1 });
   });
   it("нэг платформ: ≥1; бутархай/сөрөг татгалзана", () => {
     expect(buildItems(["ig"], { ig: 0 }, c).ok).toBe(false);
@@ -183,11 +194,39 @@ describe("payForChoice", () => {
     expect(s.calls).toEqual(["insert:order-1", "checkout:order-1", "retry:order-1"]);
   });
 
-  it("тоо/загвар өөрчилбөл хуучин pending-ийг цуцлаад шинэ", async () => {
+  it("тоо/загвар өөрчилбөл: шалгах → DB-д хуучныг canceled → шинэ захиалга → Wire intent цуцлах (best-effort)", async () => {
     const s = setup();
     await payForChoice(TOKEN, input, "ip", false, s.deps);
-    await payForChoice(TOKEN, { ...input, d: "A" }, "ip", false, s.deps);
-    expect(s.calls).toEqual(["insert:order-1", "checkout:order-1", "cancel:order-1", "status:order-1:canceled", "insert:order-2", "checkout:order-2"]);
+    const r = await payForChoice(TOKEN, { ...input, d: "A" }, "ip", false, s.deps);
+    expect(r).toMatchObject({ kind: "redirect", orderId: "order-2" });
+    expect(s.calls).toEqual([
+      "insert:order-1",
+      "checkout:order-1",
+      "sync:order-1",
+      "status:order-1:canceled",
+      "insert:order-2",
+      "checkout:order-2",
+      "void:order-1",
+    ]);
+  });
+
+  it("Wire intent цуцлах алдаа нь шинэ захиалгыг блоклохгүй (лог + ⚠️)", async () => {
+    const s = setup();
+    await payForChoice(TOKEN, input, "ip", false, s.deps);
+    s.deps.voidIntents = async () => {
+      throw new Error("wire down");
+    };
+    const r = await payForChoice(TOKEN, { ...input, qty: { fb: 1, ig: 0 } }, "ip", false, s.deps);
+    expect(r).toMatchObject({ kind: "redirect", orderId: "order-2" });
+    expect(s.alert).toHaveBeenCalledWith("Wire intent цуцлах", "order-1", expect.any(Error));
+  });
+
+  it("хуучин pending-ийн банк төлбөр боловсруулж байвал солихгүй", async () => {
+    const s = setup();
+    await payForChoice(TOKEN, input, "ip", false, s.deps);
+    s.payments.push({ id: "p", order_id: "order-1", payment_intent_id: "pi", attempt: 1, status: "processing", amount: 1, livemode: true, created_at: "" });
+    expect(await payForChoice(TOKEN, { ...input, d: "A" }, "ip", false, s.deps)).toEqual({ kind: "processing" });
+    expect(s.orders.map((o) => o.status)).toEqual(["pending_payment"]);
   });
 
   it("төлөгдсөн захиалгатай хүсэлт → дахин захиалга үүсгэхгүй, 'paid'", async () => {

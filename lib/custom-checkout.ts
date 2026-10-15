@@ -5,7 +5,7 @@ import { CONTACT } from "./config";
 import { customDb, PAID_STATUSES, type CustomDb, type CustomRequest, type MockupSet } from "./custom-db";
 import { db, type Db, type Order, type OrderItem } from "./db";
 import { env } from "./env";
-import { cancelOpenIntents, defaultDeps as fulfilDeps, retryCheckout, startCheckout } from "./fulfil";
+import { defaultDeps as fulfilDeps, markPaid, retryCheckout, startCheckout, voidIntents } from "./fulfil";
 import { mockupPath, PLATFORM_LABEL, requestPlatforms } from "./mockup-paths";
 import { DESIGN_KEYS, designSet, type DesignKey } from "./mockups/designs";
 import type { Platform } from "./mockups/variants";
@@ -39,8 +39,8 @@ export type Choice = { design: DesignKey; set: number };
 export type ItemsResult = { ok: true; items: OrderItem[]; totalQty: number } | { ok: false; field: string; message: string };
 
 /**
- * Платформ бүрийн тоо → захиалгын мөрүүд. Нэг платформ бол ≥1. Хоёр платформ бол тус бүр ≥0,
- * нийт ≥2 (хоёр хувилбартай загварт). Үнэ нийт тоогоор тооцогдоно.
+ * Платформ бүрийн тоо → захиалгын мөрүүд. Тус бүр ≥0, нийт ≥1 — хоёр линк өгсөн ч нэг
+ * платформын захиалга болно. Линк өгөөгүй платформын тоог авч үзэхгүй. Үнэ нийт тоогоор.
  */
 export function buildItems(platforms: Platform[], qty: Qty, choice: Choice): ItemsResult {
   const items: OrderItem[] = [];
@@ -51,8 +51,7 @@ export function buildItems(platforms: Platform[], qty: Qty, choice: Choice): Ite
     total += n;
     if (n > 0) items.push({ sku: CUSTOM_SKU, qty: n, platform: p, design: choice.design, set: choice.set });
   }
-  if (platforms.length === 1 && total < 1) return { ok: false, field: platforms[0], message: "Дор хаяж 1 ширхэг" };
-  if (platforms.length > 1 && total < 2) return { ok: false, field: "fb", message: "Facebook, Instagram нийлээд дор хаяж 2 ширхэг" };
+  if (total < 1) return { ok: false, field: platforms[0], message: "Дор хаяж 1 ширхэг" };
   return { ok: true, items, totalQty: total };
 }
 
@@ -89,7 +88,11 @@ export type CheckoutDeps = {
   /** Phase 2-ын төлбөрийн функцууд (тестэд хуурамч) */
   startCheckout: (order: Order) => Promise<string>;
   retryCheckout: typeof retryCheckout;
-  cancelOpenIntents: typeof cancelOpenIntents;
+  /** Wire-аас шалгаж төлөгдсөн бол paid болгоно (Phase 2-ын markPaid) */
+  syncPaid: (orderId: string) => Promise<{ status: Order["status"] }>;
+  listPayments: Db["listPayments"];
+  /** Хуучин захиалгын intent-үүдийг цуцлах — best-effort, хэзээ ч throw хийхгүй */
+  voidIntents: (orderId: string) => Promise<void>;
   telegram: typeof sendTelegram;
   alert: typeof alert;
   secret: string;
@@ -100,7 +103,9 @@ export const defaultCheckoutDeps = (): CheckoutDeps => ({
   orders: db,
   startCheckout: (o) => startCheckout(o, 1, fulfilDeps()),
   retryCheckout: (id) => retryCheckout(id, fulfilDeps()),
-  cancelOpenIntents: (id) => cancelOpenIntents(id, fulfilDeps()),
+  syncPaid: (id) => markPaid(id, undefined, fulfilDeps()),
+  listPayments: (id) => db.listPayments(id),
+  voidIntents: (id) => voidIntents(id, fulfilDeps()),
   telegram: sendTelegram,
   alert,
   secret: env().CRON_SECRET,
@@ -234,16 +239,17 @@ export async function payForChoice(
   try {
     // Давхар дарах / буцаж ирэх: ижил pending байвал түүнийг дахин ашиглана (шинэ intent, ижил захиалга)
     const pending = open.find((o) => o.status === "pending_payment");
+    let replaced: string | null = null;
     if (pending) {
       if (sameOrder(pending, items, totals.total)) return await resume(pending.id, deps);
-      // Тоо/загвар өөрчлөгдсөн → хуучныг Wire дээр цуцлаад шинийг үүсгэнэ
-      const c = await deps.cancelOpenIntents(pending.id);
-      if (c.kind === "processing") return { kind: "processing" };
-      if (c.kind === "status" && c.status !== "pending_payment") {
-        if ((PAID_STATUSES as readonly string[]).includes(c.status)) return { kind: "paid", orderId: pending.id };
-      } else {
-        await deps.orders.setOrderStatus(pending.id, "pending_payment", "canceled");
-      }
+      // Тоо/загвар өөрчлөгдсөн. Дараалал: (0) аль хэдийн төлөгдсөн эсэхийг шалгах, банк боловсруулж
+      // байвал солихгүй → (1) DB-д хуучныг 'canceled' болгож шинийг үүсгэх → (2) Wire intent-ийг
+      // best-effort цуцлах. Хуучин intent хожуу төлөгдвөл markPaid ⚠️ "ХУУЧИН ЗАХИАЛГЫН ТӨЛБӨР" илгээнэ.
+      const synced = await deps.syncPaid(pending.id);
+      if ((PAID_STATUSES as readonly string[]).includes(synced.status)) return { kind: "paid", orderId: pending.id };
+      if ((await deps.listPayments(pending.id)).some((x) => x.status === "processing")) return { kind: "processing" };
+      if (!(await deps.orders.setOrderStatus(pending.id, "pending_payment", "canceled"))) return { kind: "processing" };
+      replaced = pending.id;
     }
 
     const order = await deps.db.insertCustomOrder({
@@ -268,7 +274,15 @@ export async function payForChoice(
       const again = (await deps.db.listOpenOrders(req.id)).find((o) => o.status === "pending_payment");
       return again && sameOrder(again, items, totals.total) ? await resume(again.id, deps) : { kind: "processing" };
     }
-    return { kind: "redirect", url: await deps.startCheckout(order), orderId: order.id };
+    const url = await deps.startCheckout(order);
+    if (replaced) {
+      try {
+        await deps.voidIntents(replaced);
+      } catch (e) {
+        await deps.alert("Wire intent цуцлах", replaced, e); // шинэ захиалгыг блоклохгүй
+      }
+    }
+    return { kind: "redirect", url, orderId: order.id };
   } catch (e) {
     await deps.alert("Custom төлбөр", req.business_name, e);
     return { kind: "error" };

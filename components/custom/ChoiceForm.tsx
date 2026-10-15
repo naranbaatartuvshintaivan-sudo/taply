@@ -104,7 +104,7 @@ export function ChoiceForm({
           </div>
         ))}
       </div>
-      {both && <p className="mb-0 mt-3 text-sm text-mute">Facebook, Instagram нийлээд дор хаяж 2 ширхэг. Үнэ нийт тоогоор тооцогдоно.</p>}
+      {both && <p className="mb-0 mt-3 text-sm text-mute">Аль нэгийг нь эсвэл хоёуланг нь захиалж болно. Үнэ нийт тоогоор тооцогдоно.</p>}
 
       <div className="mt-10">
         {quote ? (

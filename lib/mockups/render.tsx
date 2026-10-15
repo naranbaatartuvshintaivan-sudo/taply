@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import type { ReactElement } from "react";
 import sharp from "sharp";
-import { DESIGN_KEYS, designSet, FACE_H, FACE_W, QR_MAX, type DesignKey, type FaceInput } from "./designs";
+import { cleanName, DESIGN_KEYS, designSet, FACE_H, FACE_W, QR_MAX, type DesignKey, type FaceInput } from "./designs";
 import { fonts } from "./fonts";
 import type { PreparedLogo } from "./logo";
 import { decodeQr, qrPng } from "./qr";
@@ -62,13 +62,15 @@ export async function renderDesigns(input: RenderInput): Promise<RenderedDesign[
     variants(input.fbUrl, input.igUrl).map(async (v) => ({ ...v, qr: await qrPng(v.url, QR_MAX) })),
   );
 
+  // Emoji-г хасна (фонтууд дэмждэггүй); бусад тэмдэгт бичсэнээр нь
+  const name = cleanName(input.name);
   const set = designSet(input.set);
   const bg = await standBackground();
   // Хувилбар бүрийг зэрэг: satori (JS) ажиллах зуур sharp (libuv thread) нь өмнөхийг боловсруулна
   const jobs = DESIGN_KEYS.flatMap((key) =>
     qrs.map(async ({ platform, url, qr }): Promise<RenderedDesign> => {
       const d = set[key];
-      const face: FaceInput = { name: input.name, logo, qr: { src: dataUri(qr.png), size: qr.size }, platforms: [platform], brand: input.logo.brand };
+      const face: FaceInput = { name, logo, qr: { src: dataUri(qr.png), size: qr.size }, platforms: [platform], brand: input.logo.brand };
       const facePng = await toPng(d.render(face), FACE_W, FACE_H);
       const preview = await composeStand(bg, facePng);
       // QR бүрийг яг тэр платформын линктэй тулгана

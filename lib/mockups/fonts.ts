@@ -13,6 +13,7 @@ const FILES: [name: string, file: string, weight: Weight, style: "normal" | "ita
   ["Manrope", "Manrope-ExtraBold.ttf", 800, "normal"],
   ["Playfair", "PlayfairDisplay-Regular.ttf", 400, "normal"],
   ["Playfair", "PlayfairDisplay-Bold.ttf", 700, "normal"],
+  ["Playfair", "PlayfairDisplay-Italic.ttf", 400, "italic"],
   ["Lora", "Lora-Medium.ttf", 500, "normal"],
   ["Lora", "Lora-Bold.ttf", 700, "normal"],
   ["Lora", "Lora-MediumItalic.ttf", 500, "italic"],

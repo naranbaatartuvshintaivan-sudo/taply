@@ -4,6 +4,7 @@ import { after } from "next/server";
 import sharp from "sharp";
 import { alert } from "./alert";
 import { customDb, type CustomDb, type CustomRequest } from "./custom-db";
+import { generateMockups } from "./custom-mockups";
 import { validateCustomRequest, type CustomRequestInput } from "./custom-input";
 import { env } from "./env";
 import { checkLogo, LOGO_EXT } from "./image-check";
@@ -12,13 +13,14 @@ import { checkLimits, CUSTOM_LIMITS } from "./rate-limit";
 import { escapeHtml, sendTelegram, sendTelegramPhoto } from "./telegram";
 
 // Өөрийн логотой хүсэлт: шалгах → rate limit → лого хадгалах → бизнес upsert → хүсэлт → Telegram.
-// Загвар үүсгэх нь Шат 2 (status 'generating' хэвээр үлдэнэ).
+// Дараа нь (хариу буцсаны дараа) лого байвал 3 загвар үүсгэнэ — lib/custom-mockups.ts.
 
 export type CustomDeps = {
   db: CustomDb;
   secret: string; // rate limit hash-ийн түлхүүр
   schedule: (fn: () => Promise<void>) => void;
   notify: (req: CustomRequest, input: CustomRequestInput, logo: Uint8Array | null) => Promise<void>;
+  generate: (id: string) => Promise<unknown>;
   alert: typeof alert;
   newId: () => string;
   newToken: () => string;
@@ -29,6 +31,7 @@ export const defaultCustomDeps = (): CustomDeps => ({
   secret: env().CRON_SECRET,
   schedule: (fn) => after(fn),
   notify: notifyTelegram,
+  generate: (id) => generateMockups(id, "initial"),
   alert,
   newId: randomUUID,
   newToken: () => randomBytes(24).toString("base64url"), // 32 тэмдэгт
@@ -106,6 +109,12 @@ export async function submitCustomRequest(
         await deps.notify(req, input, logoBytes);
       } catch (e) {
         await deps.alert("Custom Telegram", input.business, e);
+      }
+      if (!logoPath) return; // "Лого байхгүй" — гараар хийнэ
+      try {
+        await deps.generate(req.id);
+      } catch (e) {
+        await deps.alert("Custom загвар", input.business, e);
       }
     });
     return { ok: true, id: req.id };

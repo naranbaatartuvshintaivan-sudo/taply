@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/server", () => ({ after: (fn: () => unknown) => void fn() }));
 vi.mock("./env", () => ({ env: () => ({}) }));
+vi.mock("./custom-mockups", () => ({ generateMockups: async () => "done" }));
 
 import { customRequestMessage, submitCustomRequest, type CustomDeps } from "./custom";
 import type { CustomDb, CustomRequest, NewCustomRequest } from "./custom-db";
@@ -26,7 +27,8 @@ function setup(over: Partial<CustomDb> = {}, allow = true) {
   const calls: string[] = [];
   const inserted: NewCustomRequest[] = [];
   const notified: { req: CustomRequest; logo: Uint8Array | null }[] = [];
-  const db: CustomDb = {
+  // Шат 1-ийн урсгалд хэрэгтэй method-ууд л (загварынх нь custom-mockups.test.ts-д)
+  const db = {
     hitRateLimit: async (bucket) => (calls.push(`hit:${bucket}`), allow),
     upsertBusiness: async (b) => (calls.push(`business:${b.phone}`), { id: "biz-1" }),
     insertCustomRequest: async (r) => {
@@ -37,18 +39,20 @@ function setup(over: Partial<CustomDb> = {}, allow = true) {
     uploadLogo: async (path) => void calls.push(`upload:${path}`),
     removeLogo: async (path) => void calls.push(`remove:${path}`),
     ...over,
-  };
+  } as CustomDb;
   const alerts: string[] = [];
+  const generated: string[] = [];
   const deps: CustomDeps = {
     db,
     secret: "s",
     schedule: (fn) => void fn(),
     notify: async (req, _input, logo) => void notified.push({ req, logo }),
+    generate: async (id) => void generated.push(id),
     alert: async (where) => void alerts.push(where),
     newId: () => "11111111-1111-1111-1111-111111111111",
     newToken: () => "t".repeat(32),
   };
-  return { deps, calls, inserted, notified, alerts };
+  return { deps, calls, inserted, notified, alerts, generated };
 }
 
 describe("submitCustomRequest", () => {
@@ -77,6 +81,8 @@ describe("submitCustomRequest", () => {
     });
     expect(s.notified).toHaveLength(1);
     expect(s.notified[0].logo).toBe(PNG);
+    await new Promise((res) => setTimeout(res, 0));
+    expect(s.generated).toEqual(["11111111-1111-1111-1111-111111111111"]);
   });
 
   it("лого байхгүй: upload хийхгүй, status 'manual', logo_path null", async () => {
@@ -86,6 +92,8 @@ describe("submitCustomRequest", () => {
     expect(s.calls.some((c) => c.startsWith("upload"))).toBe(false);
     expect(s.inserted[0]).toMatchObject({ status: "manual", logo_path: null });
     expect(s.notified[0].logo).toBeNull();
+    await new Promise((res) => setTimeout(res, 0));
+    expect(s.generated).toEqual([]); // логогүй бол автомат загваргүй
   });
 
   it("лого заавал (чекбокс сонгоогүй бол), SVG татгалзана — rate limit тоологдохгүй", async () => {

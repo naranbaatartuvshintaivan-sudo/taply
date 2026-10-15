@@ -9,5 +9,7 @@ export default defineConfig({
       "server-only": fileURLToPath(new URL("./test/empty.ts", import.meta.url)),
     },
   },
+  // tsconfig-ийн jsx: "preserve" нь Next-д зориулагдсан — тестэд JSX-ийг React runtime-аар хөрвүүлнэ
+  oxc: { jsx: { runtime: "automatic" } },
   test: { include: ["**/*.test.ts"], exclude: ["node_modules/**", ".next/**"] },
 });

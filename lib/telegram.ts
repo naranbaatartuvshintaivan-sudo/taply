@@ -59,6 +59,17 @@ export function sendTelegramPhoto(photo: { bytes: Uint8Array; filename: string; 
   return tg("sendPhoto", form);
 }
 
+/** 2–10 зураг нэг цомог болж очно. Caption (HTML) нь эхний зурган дээр. Цомогт товч тавьж болдоггүй. */
+export function sendTelegramMediaGroup(photos: { bytes: Uint8Array; filename: string; type: string }[], html: string) {
+  const form = new FormData();
+  const media = photos.map((p, i) => {
+    form.set(`p${i}`, new Blob([p.bytes as BlobPart], { type: p.type }), p.filename);
+    return { type: "photo", media: `attach://p${i}`, ...(i === 0 ? { caption: html, parse_mode: "HTML" } : {}) };
+  });
+  form.set("media", JSON.stringify(media));
+  return tg("sendMediaGroup", form);
+}
+
 /** /api/health — token хүчинтэй, bot TELEGRAM_CHAT_ID-д хандаж чадаж байгаа эсэх (мессеж илгээхгүй). */
 export function pingTelegram() {
   return tg("getChat", {});

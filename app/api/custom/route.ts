@@ -4,6 +4,8 @@ import { LOGO_MAX_BYTES, LOGO_TOO_BIG } from "@/lib/image-check";
 import { clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
+// Хариу буцсаны дараа (after) 3 загвар рендэрлэнэ
+export const maxDuration = 60;
 
 // Өөрийн логотой хүсэлт (multipart/form-data). Бүх шалгалт lib/custom.ts-д.
 export async function POST(req: Request) {

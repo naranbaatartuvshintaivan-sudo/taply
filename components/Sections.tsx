@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CONTACT, PRICE_CARDS, SHOW_PRICES } from "@/lib/config";
 import { CUSTOMERS, customerAlt, distribute, type Customer } from "@/lib/customers";
 import { customPublic } from "@/lib/flags";
+import { CustomCardLink } from "./custom/CustomCardLink";
 import { PRODUCTS } from "@/lib/products";
 import { GoLink } from "./PageTransition";
 import { Photo } from "./Photo";
@@ -378,6 +379,8 @@ const orderChoices = (custom: boolean): {
   desc: string;
   from: string;
   cta: string;
+  /** Админ cookie-тэй үед /custom руу солих (CustomCardLink) */
+  adminSwitch?: boolean;
   dark?: boolean;
 }[] => [
   {
@@ -396,6 +399,7 @@ const orderChoices = (custom: boolean): {
     desc: "Логогоо илгээнэ үү. 3 загвар гаргаж үзүүлнэ, та сонгоно.",
     from: "44,900₮-өөс",
     cta: custom ? "Захиалах" : "Холбогдох",
+    adminSwitch: !custom,
     dark: true,
   },
 ];
@@ -414,17 +418,28 @@ export function Order() {
           const cls =
             "group flex min-h-[320px] flex-col justify-between px-6 py-10 sm:px-12 sm:py-14 " +
             (c.dark ? "bg-ink text-white hover:bg-[#1f1f1f]" : "border-[1.5px] border-ink hover:bg-[#f5f5f5]");
+          const top = (
+            <div>
+              <div className={`${eyebrow} ${c.dark ? "text-[#9a9a9a]" : "text-mute"}`}>{c.eyebrow}</div>
+              <div className="mt-6 text-[clamp(36px,4.5vw,60px)] font-extrabold leading-[1.02] tracking-[-.04em]">
+                {c.title}
+              </div>
+              <p className={`mb-0 mt-6 max-w-[400px] text-base leading-[1.6] ${c.dark ? "text-[#b5b5b5]" : "text-body"}`}>
+                {c.desc}
+              </p>
+            </div>
+          );
+          // CUSTOM_PUBLIC=false: нийтэд чат руу; админ (сервер баталсан) бол client талд /custom руу
+          if (c.adminSwitch) {
+            return (
+              <CustomCardLink key="custom" className={cls} from={c.from}>
+                {top}
+              </CustomCardLink>
+            );
+          }
           const body = (
             <>
-              <div>
-                <div className={`${eyebrow} ${c.dark ? "text-[#9a9a9a]" : "text-mute"}`}>{c.eyebrow}</div>
-                <div className="mt-6 text-[clamp(36px,4.5vw,60px)] font-extrabold leading-[1.02] tracking-[-.04em]">
-                  {c.title}
-                </div>
-                <p className={`mb-0 mt-6 max-w-[400px] text-base leading-[1.6] ${c.dark ? "text-[#b5b5b5]" : "text-body"}`}>
-                  {c.desc}
-                </p>
-              </div>
+              {top}
               <div className="mt-12 flex items-center justify-between gap-4 text-[15px] font-bold">
                 <span>{c.from}</span>
                 <span className="inline-flex items-center gap-2">

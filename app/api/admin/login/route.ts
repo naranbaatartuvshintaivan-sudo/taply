@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ADMIN_COOKIE, ADMIN_COOKIE_MAX_AGE, ADMIN_LOGIN_LIMIT, adminCookieValue, isAdminKey } from "@/lib/admin";
+import { ADMIN_HINT_COOKIE } from "@/lib/admin-card";
 import { customDb } from "@/lib/custom-db";
 import { env } from "@/lib/env";
 import { checkLimits, clientIp } from "@/lib/rate-limit";
@@ -27,6 +28,15 @@ export async function POST(req: Request) {
     httpOnly: true,
     secure: new URL(req.url).protocol === "https:",
     // Lax: Telegram-аас нээхэд (top-level GET) илгээгдэнэ, өөр сайтаас POST хийхэд илгээгдэхгүй
+    sameSite: "lax",
+    path: "/",
+    maxAge: ADMIN_COOKIE_MAX_AGE,
+  });
+  // Эрх олгодоггүй дохио: нүүр хуудасны карт /api/admin/me-ээс асуух эсэхийг л шийднэ
+  // (нийтийн хэрэглэгчид нэмэлт хүсэлт явуулахгүйн тулд). Шийдвэрийг сервер httpOnly cookie-оор гаргана.
+  res.cookies.set(ADMIN_HINT_COOKIE, "1", {
+    httpOnly: false,
+    secure: new URL(req.url).protocol === "https:",
     sameSite: "lax",
     path: "/",
     maxAge: ADMIN_COOKIE_MAX_AGE,

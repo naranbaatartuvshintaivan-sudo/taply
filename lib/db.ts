@@ -223,6 +223,12 @@ export const db: Db = {
   },
 };
 
+/** Rate limit (public.hit_rate_limit — prod DB-д бий, migration нь site/custom-system салбарт). true = зөвшөөрнө. */
+export async function hitRateLimit(bucket: string, keyHash: string, limit: number, window: string): Promise<boolean> {
+  const r = await sb().rpc("hit_rate_limit", { p_bucket: bucket, p_key_hash: keyHash, p_limit: limit, p_window: window });
+  return must(r, "hitRateLimit") === true;
+}
+
 /** /api/health — service role-оор orders хүснэгтэд хандаж чадаж байгаа эсэх. */
 export async function pingDb(): Promise<void> {
   must(await sb().from("orders").select("id").limit(1), "ping");

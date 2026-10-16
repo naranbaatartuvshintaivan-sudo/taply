@@ -2,6 +2,7 @@ import { isAdminKey, TEST_PRICE, TEST_SKU } from "@/lib/admin";
 import { alert } from "@/lib/alert";
 import { db } from "@/lib/db";
 import { startCheckout } from "@/lib/fulfil";
+import { allowRequest, ORDER_LIMITS } from "@/lib/guard";
 import { readJson, supportMessage, userError, json } from "@/lib/http";
 import { contactSchema, validateStandardOrder } from "@/lib/order-input";
 import { SKU_LABEL } from "@/lib/pricing";
@@ -10,6 +11,9 @@ export const runtime = "nodejs";
 
 // Энгийн захиалга: шалгах → үнэ тооцох (сервер) → нөөц → orders insert → Wire checkout URL
 export async function POST(req: Request) {
+  if (!(await allowRequest(req, ORDER_LIMITS.create))) {
+    return userError(429, "Хэт олон оролдлого. Түр хүлээгээд дахин оролдоно уу.");
+  }
   let body: unknown;
   try {
     body = await readJson(req);

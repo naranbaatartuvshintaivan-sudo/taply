@@ -259,6 +259,14 @@ describe("markPaid", () => {
     expect(s.orders.get(ORDER_ID)!.status).toBe("pending_payment");
   });
 
+  it("валют MNT биш → paid болгохгүй, ⚠️", async () => {
+    s.intents.get("pi_one")!.currency = "USD";
+    const r = await markPaid(ORDER_ID, "pi_one", s.deps);
+    expect(r.newlyPaid).toBe(false);
+    expect(s.orders.get(ORDER_ID)!.status).toBe("pending_payment");
+    expect(s.alert).toHaveBeenCalledTimes(1);
+  });
+
   it("хугацаа дууссан (expired) захиалга дээр хожуу төлбөр → paid", async () => {
     s.orders.get(ORDER_ID)!.status = "expired";
     const r = await markPaid(ORDER_ID, undefined, s.deps);

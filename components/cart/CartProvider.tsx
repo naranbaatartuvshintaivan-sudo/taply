@@ -1,12 +1,13 @@
 "use client";
 
-import { LazyMotion } from "framer-motion";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
 import { cartReducer, EMPTY_CART, getStorage, loadCart, saveCart } from "@/lib/cart";
-import { CartDrawer } from "./CartDrawer";
 import { CartCtx, type CartCtxValue, type CartStep } from "./context";
+import { loadDrawer } from "./lazy";
 
-const loadFeatures = () => import("./motion-features").then((r) => r.default);
+// Drawer (framer-motion, form, checkout) — эхний JS-д орохгүй
+const CartDrawer = dynamic(() => loadDrawer().then((m) => m.CartDrawer), { ssr: false });
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, EMPTY_CART);
@@ -14,6 +15,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<CartStep>("cart");
   const [message, setMessage] = useState("");
+  // Нэг удаа prefetch/нээгдсэний дараа drawer mount хэвээр (хаалттай) — дахин нээхэд loading flash-гүй
+  const [drawerWanted, setDrawerWanted] = useState(false);
 
   // Уншилт зөвхөн mount-ын дараа: server render ба эхний client render хоёулаа хоосон сагстай
   useEffect(() => {
@@ -25,7 +28,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (ready) saveCart(getStorage(), state);
   }, [ready, state]);
 
+  const prefetch = useCallback(() => {
+    setDrawerWanted(true);
+    void loadDrawer();
+  }, []);
   const openCart = useCallback((s: CartStep = "cart") => {
+    setDrawerWanted(true);
     setStep(s);
     setOpen(true);
   }, []);
@@ -41,16 +49,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<CartCtxValue>(
-    () => ({ state, dispatch, ready, open, step, openCart, closeCart, setStep, clearAll, announce }),
-    [state, ready, open, step, openCart, closeCart, clearAll, announce],
+    () => ({ state, dispatch, ready, open, step, openCart, closeCart, setStep, clearAll, announce, prefetch }),
+    [state, ready, open, step, openCart, closeCart, clearAll, announce, prefetch],
   );
 
   return (
     <CartCtx.Provider value={value}>
-      <LazyMotion features={loadFeatures} strict>
-        {children}
-        <CartDrawer />
-      </LazyMotion>
+      {children}
+      {drawerWanted && <CartDrawer />}
       <div aria-live="polite" role="status" className="sr-only">
         {message}
       </div>

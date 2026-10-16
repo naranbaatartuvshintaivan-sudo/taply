@@ -7,7 +7,7 @@ import { useCart } from "./context";
 // Мобайл: сагс хоосон биш үед доор наалдсан товч. iPhone-ий доод зурвасыг (safe-area) тооцно.
 // Footer-ийн доод хэсгийг далдлахгүйн тулд ижил өндөртэй хар зай үлдээнэ.
 export function CartBar() {
-  const { state, ready, open, openCart } = useCart();
+  const { state, ready, open, openCart, prefetch } = useCart();
   const n = ready ? totalQty(state) : 0;
   if (n === 0) return null;
   const q = cartQuote(state);
@@ -19,6 +19,9 @@ export function CartBar() {
           <button
             type="button"
             onClick={() => openCart("cart")}
+            onPointerEnter={prefetch}
+            onTouchStart={prefetch}
+            onFocus={prefetch}
             className="flex min-h-14 w-full items-center justify-between gap-3 rounded-full bg-white px-6 text-[15px] font-bold text-ink"
           >
             <span>

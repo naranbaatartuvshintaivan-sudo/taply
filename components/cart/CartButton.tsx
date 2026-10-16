@@ -12,6 +12,9 @@ export function CartButton() {
     <button
       type="button"
       onClick={() => cart.openCart("cart")}
+      onPointerEnter={cart.prefetch}
+      onTouchStart={cart.prefetch}
+      onFocus={cart.prefetch}
       aria-label={n > 0 ? `Сагс, ${n} ширхэг` : "Сагс, хоосон"}
       className="relative inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-ph"
     >

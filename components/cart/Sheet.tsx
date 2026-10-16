@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { AnimatePresence, domAnimation, LazyMotion, m, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, type ReactNode } from "react";
 
 // Сагсны drawer болон барааны modal-ын нийтлэг суурь:
@@ -73,40 +73,43 @@ export function Sheet({
   const shown = reduce ? { opacity: 1 } : drawer ? { x: 0 } : { opacity: 1, y: 0 };
 
   return (
-    <AnimatePresence>
-      {open && (
-        <div className={`fixed inset-0 z-[90] flex ${drawer ? "justify-end" : "items-end justify-center md:items-center md:p-8"}`}>
-          <m.div
-            className="absolute inset-0 bg-ink/50"
-            onClick={onClose}
-            aria-hidden
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          />
-          <m.div
-            ref={panel}
-            role="dialog"
-            aria-modal="true"
-            aria-label={label}
-            tabIndex={-1}
-            className={
-              "relative flex flex-col overflow-hidden bg-white outline-none " +
-              (drawer
-                ? "h-full w-full max-w-[480px] pb-[env(safe-area-inset-bottom)]"
-                : "max-h-[92dvh] w-full rounded-t-[16px] pb-[env(safe-area-inset-bottom)] md:max-w-[960px] md:rounded-[12px] md:pb-0")
-            }
-            initial={hidden}
-            animate={shown}
-            exit={hidden}
-            transition={reduce ? { duration: 0.12 } : { type: "tween", ease: [0.22, 1, 0.36, 1], duration: 0.32 }}
-          >
-            {children}
-          </m.div>
-        </div>
-      )}
-    </AnimatePresence>
+    // Sheet өөрөө lazy chunk-д байгаа тул domAnimation-ыг энд шууд өгнө (m.* + strict)
+    <LazyMotion features={domAnimation} strict>
+      <AnimatePresence>
+        {open && (
+          <div className={`fixed inset-0 z-[90] flex ${drawer ? "justify-end" : "items-end justify-center md:items-center md:p-8"}`}>
+            <m.div
+              className="absolute inset-0 bg-ink/50"
+              onClick={onClose}
+              aria-hidden
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            />
+            <m.div
+              ref={panel}
+              role="dialog"
+              aria-modal="true"
+              aria-label={label}
+              tabIndex={-1}
+              className={
+                "relative flex flex-col overflow-hidden bg-white outline-none " +
+                (drawer
+                  ? "h-full w-full max-w-[480px] pb-[env(safe-area-inset-bottom)]"
+                  : "max-h-[92dvh] w-full rounded-t-[16px] pb-[env(safe-area-inset-bottom)] md:max-w-[960px] md:rounded-[12px] md:pb-0")
+              }
+              initial={hidden}
+              animate={shown}
+              exit={hidden}
+              transition={reduce ? { duration: 0.12 } : { type: "tween", ease: [0.22, 1, 0.36, 1], duration: 0.32 }}
+            >
+              {children}
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </LazyMotion>
   );
 }
 

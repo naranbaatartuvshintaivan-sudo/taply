@@ -20,6 +20,8 @@ export type CartCtxValue = {
   /** Захиалга амжилттай үүссэний дараа: сагс + хадгалалт хоёуланг цэвэрлэнэ */
   clearAll: () => void;
   announce: (msg: string) => void;
+  /** Drawer-ийн chunk-ийг урьдчилан татна (icon/bar дээр hover, touchstart, focus) */
+  prefetch: () => void;
 };
 
 export const CartCtx = createContext<CartCtxValue | null>(null);

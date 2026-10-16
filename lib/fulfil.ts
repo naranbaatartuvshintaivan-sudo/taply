@@ -135,8 +135,12 @@ export async function markPaid(
     if (pi.status !== p.status) await deps.db.setPaymentStatus(pi.id, pi.status);
     if (pi.status !== "succeeded") continue;
 
-    if (pi.amount !== order.total || pi.metadata?.order_id !== order.id) {
-      await deps.alert("markPaid", order.code, new Error(`дүн/metadata таарахгүй (${pi.amount} vs ${order.total})`));
+    if (pi.amount !== order.total || pi.currency?.toUpperCase() !== "MNT" || pi.metadata?.order_id !== order.id) {
+      await deps.alert(
+        "markPaid",
+        order.code,
+        new Error(`дүн/валют/metadata таарахгүй (${pi.amount} ${pi.currency} vs ${order.total} MNT)`),
+      );
       continue;
     }
 

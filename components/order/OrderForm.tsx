@@ -20,7 +20,8 @@ const OTHER = "__other";
 type ServerQuote = { totalQty: number; subtotal: number; unitPrice: number | null; deliveryFee: number; total: number };
 type Errors = Partial<Record<string, string>>;
 
-export function OrderForm({ testKey }: { testKey?: string }) {
+export function OrderForm({ testPanel = false }: { testPanel?: boolean }) {
+  const [testKey, setTestKey] = useState("");
   const [step, setStep] = useState(0);
   const [qty, setQty] = useState<Record<StandardSku, number>>({ fb_sticker: 0, ig_sticker: 0, fb_stand: 0, ig_stand: 0 });
   const [f, setF] = useState({ fb: "", ig: "", name: "", phone: "", email: "", district: "", address: "", note: "", website: "" });
@@ -119,9 +120,18 @@ export function OrderForm({ testKey }: { testKey?: string }) {
 
   return (
     <div>
-      {testKey && (
+      {testPanel && (
         <div className="mb-12 flex flex-wrap items-center justify-between gap-4 border-[1.5px] border-dashed border-ink px-6 py-5">
           <span className="text-base font-bold">🧪 Тест горим {testMode ? "· 100₮ тест төлбөр" : ""}</span>
+          <input
+            type="password"
+            autoComplete="off"
+            aria-label="Admin түлхүүр"
+            placeholder="Admin түлхүүр"
+            value={testKey}
+            onChange={(e) => setTestKey(e.target.value)}
+            className="min-h-11 flex-1 border-[1.5px] border-ink px-4 text-base"
+          />
           <button
             type="button"
             className={btnLine}

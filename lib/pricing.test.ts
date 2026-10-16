@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { quote } from "./pricing";
+import { CUSTOM_PHONE_ONLY_FROM, FROM_PRICE, priceTiers, quote, subtotalFor } from "./pricing";
 
 const q = (type: "standard" | "custom", qty: number) => quote(type, [{ sku: "x", qty }]);
 const sub = (type: "standard" | "custom", qty: number) => {
@@ -72,4 +72,25 @@ describe("буруу оролт", () => {
   it("сөрөг", () => expect(q("standard", -1)).toEqual({ ok: false, reason: "bad_qty" }));
   it("бутархай", () => expect(q("standard", 1.5)).toEqual({ ok: false, reason: "bad_qty" }));
   it("хэт их", () => expect(q("standard", 201)).toEqual({ ok: false, reason: "too_many" }));
+});
+
+describe("харуулах шатлал (нүүр хуудасны үнийн блок)", () => {
+  const num = (v: string) => Number(v.replace(/\D/g, ""));
+  it("утга нь серверийн subtotalFor-той таарна", () => {
+    for (const type of ["standard", "custom"] as const) {
+      const [one, two, mid, bulk] = priceTiers(type).map((r) => num(r.value));
+      expect(one).toBe(subtotalFor(type, 1).subtotal);
+      expect(two).toBe(subtotalFor(type, 2).subtotal);
+      expect(mid).toBe(subtotalFor(type, 3).unitPrice);
+      expect(mid).toBe(subtotalFor(type, 9).unitPrice);
+      expect(bulk).toBe(subtotalFor(type, 10).unitPrice);
+      expect(FROM_PRICE[type]).toBe(one);
+    }
+  });
+  it("хил: 3–9, 10+ ба custom 30+ утсаар", () => {
+    expect(priceTiers("standard").map((r) => r.label)).toEqual(["1 ширхэг", "2 ширхэг (FB + IG)", "3–9 ширхэг", "10+ ширхэг"]);
+    expect(priceTiers("custom").map((r) => r.label)).toEqual(["1 ширхэг", "2 ширхэг", "3–9 ширхэг", "10–29 ширхэг", "30+ ширхэг"]);
+    expect(quote("custom", [{ sku: "custom_wide", qty: CUSTOM_PHONE_ONLY_FROM - 1 }]).ok).toBe(true);
+    expect(quote("custom", [{ sku: "custom_wide", qty: CUSTOM_PHONE_ONLY_FROM }])).toEqual({ ok: false, reason: "phone_only" });
+  });
 });

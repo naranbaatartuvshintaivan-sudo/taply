@@ -80,7 +80,7 @@ export function TransitionProvider({
     requestAnimationFrame(tick);
   };
 
-  // Зөвхөн "Яаж ажилладаг" (#how) ↔ "Захиалах" (#order) хооронд мозайк транзишн
+  // Зөвхөн "Яаж ажилладаг" (#how) ↔ "Бүтээгдэхүүн" (#products) хооронд мозайк транзишн
   const go = useCallback<GoFn>((e, id) => {
     e.preventDefault();
     const el = document.getElementById(id);
@@ -93,9 +93,9 @@ export function TransitionProvider({
       const r = s.getBoundingClientRect();
       return r.top <= mid && r.bottom > mid;
     };
-    const from = inView("order") ? "order" : inView("how") ? "how" : null;
+    const from = inView("products") ? "products" : inView("how") ? "how" : null;
     const special =
-      (from === "order" && id === "how") || (from === "how" && id === "order");
+      (from === "products" && id === "how") || (from === "how" && id === "products");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (!special || reduce) {

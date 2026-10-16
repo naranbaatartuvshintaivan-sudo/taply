@@ -2,36 +2,29 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { CONTACT, DELIVERY } from "@/lib/config";
-import { normalizeFacebook, normalizeInstagram } from "@/lib/links";
+import { checkContact, checkLinks, EMPTY_FIELDS, TOO_MANY_MESSAGE, type Errors, type OrderFields } from "@/lib/checkout";
+import { CONTACT } from "@/lib/config";
 import { fmt, MAX_QTY, quote, SKU_PLATFORM, STANDARD_SKUS, type StandardSku } from "@/lib/pricing";
-import { btnLine, btnSolid, eyebrow, Field, Select, Stepper, StepNav, SummaryRow, TextArea, TextInput } from "./ui";
-
-const PRODUCTS: { sku: StandardSku; name: string; kind: string; src: string; alt: string }[] = [
-  { sku: "fb_sticker", name: "Facebook наалт", kind: "Хэвтээ наалт · 100 × 100 мм", src: "/products/hevteifb.webp", alt: "Facebook хуудас руу холбодог 100 × 100 мм NFC наалт" },
-  { sku: "ig_sticker", name: "Instagram наалт", kind: "Хэвтээ наалт · 100 × 100 мм", src: "/products/hevtei.webp", alt: "Instagram хуудас руу холбодог 100 × 100 мм NFC наалт" },
-  { sku: "fb_stand", name: "Facebook стенд", kind: "Ширээний босоо стенд", src: "/products/bosoofb.webp", alt: "Facebook хуудас руу холбодог ширээний NFC стенд" },
-  { sku: "ig_stand", name: "Instagram стенд", kind: "Ширээний босоо стенд", src: "/products/bosooig.webp", alt: "Instagram хуудас руу холбодог ширээний NFC стенд" },
-];
+import { SHOP as PRODUCTS } from "@/lib/shop";
+import { DeliveryFields, LinkFields, OTHER_DISTRICT } from "./OrderFields";
+import { btnLine, btnSolid, eyebrow, Stepper, StepNav, SummaryRow } from "./ui";
 
 const STEPS = ["Бүтээгдэхүүн", "Линк", "Хүргэлт", "Төлөх"];
-const OTHER = "__other";
 
 type ServerQuote = { totalQty: number; subtotal: number; unitPrice: number | null; deliveryFee: number; total: number };
-type Errors = Partial<Record<string, string>>;
 
 export function OrderForm({ testPanel = false }: { testPanel?: boolean }) {
   const [testKey, setTestKey] = useState("");
   const [step, setStep] = useState(0);
   const [qty, setQty] = useState<Record<StandardSku, number>>({ fb_sticker: 0, ig_sticker: 0, fb_stand: 0, ig_stand: 0 });
-  const [f, setF] = useState({ fb: "", ig: "", name: "", phone: "", email: "", district: "", address: "", note: "", website: "" });
+  const [f, setF] = useState<OrderFields>(EMPTY_FIELDS);
   const [errors, setErrors] = useState<Errors>({});
   const [serverQuote, setServerQuote] = useState<ServerQuote | null>(null);
   const [busy, setBusy] = useState(false);
   const [fatal, setFatal] = useState<string | null>(null);
   const [testMode, setTestMode] = useState(false);
 
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const set = (k: keyof OrderFields) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setF((p) => ({ ...p, [k]: e.target.value }));
     setErrors((p) => ({ ...p, [k]: undefined }));
   };
@@ -52,19 +45,10 @@ export function OrderForm({ testPanel = false }: { testPanel?: boolean }) {
 
   // ── Алхам бүрийн client шалгалт (сервер дахин бүгдийг шалгана) ──
   function check(s: number): boolean {
-    const e: Errors = {};
-    if (s === 0 && !estimate.ok) e.items = estimate.reason === "too_many" ? `${MAX_QTY}-аас дээш бол утсаар тохирно` : "Дор хаяж нэг бүтээгдэхүүн сонгоно уу";
-    if (s === 1) {
-      if (needs.has("fb") && !normalizeFacebook(f.fb)) e.fb = "Facebook хуудасныхаа линкийг оруулна уу (facebook.com/...)";
-      if (needs.has("ig") && !normalizeInstagram(f.ig)) e.ig = "Instagram хаягаа оруулна уу (@нэр эсвэл instagram.com/...)";
-    }
-    if (s === 2) {
-      if (f.name.trim().length < 2) e.name = "Нэрээ оруулна уу";
-      if (!/^\d{8}$/.test(f.phone.replace(/[\s-]/g, ""))) e.phone = "Утасны дугаар 8 оронтой байх ёстой";
-      if (f.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) e.email = "Имэйл хаяг буруу байна";
-      if (!DELIVERY.districts.includes(f.district)) e.district = "Хүргэлтийн дүүргээ сонгоно уу";
-      if (f.address.trim().length < 5) e.address = "Хаягаа дэлгэрэнгүй оруулна уу";
-    }
+    let e: Errors = {};
+    if (s === 0 && !estimate.ok) e.items = estimate.reason === "too_many" ? TOO_MANY_MESSAGE : "Дор хаяж нэг бүтээгдэхүүн сонгоно уу";
+    if (s === 1) e = checkLinks(f, needs);
+    if (s === 2) e = checkContact(f);
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -116,7 +100,7 @@ export function OrderForm({ testPanel = false }: { testPanel?: boolean }) {
     }
   }
 
-  const otherDistrict = f.district === OTHER;
+  const otherDistrict = f.district === OTHER_DISTRICT;
 
   return (
     <div>
@@ -192,16 +176,7 @@ export function OrderForm({ testPanel = false }: { testPanel?: boolean }) {
             <h2 id="s1" className="m-0 text-2xl font-bold tracking-[-.02em]">Карт аль хуудас руу нээгдэх вэ?</h2>
             <p className="mb-12 mt-3 text-base text-body">Бид энэ линкийг таны карт руу бичнэ.</p>
             <div className="flex flex-col gap-10">
-              {needs.has("fb") && (
-                <Field label="Facebook хуудас" hint="Жишээ: facebook.com/taniinhuudas" error={errors.fb}>
-                  <TextInput value={f.fb} onChange={set("fb")} invalid={!!errors.fb} placeholder="facebook.com/..." inputMode="url" autoComplete="url" />
-                </Field>
-              )}
-              {needs.has("ig") && (
-                <Field label="Instagram" hint="Жишээ: @taniinner эсвэл instagram.com/taniinner" error={errors.ig}>
-                  <TextInput value={f.ig} onChange={set("ig")} invalid={!!errors.ig} placeholder="@..." autoCapitalize="none" autoCorrect="off" />
-                </Field>
-              )}
+              <LinkFields f={f} set={set} errors={errors} needs={needs} />
             </div>
             <div className="mt-14 flex flex-wrap gap-4">
               <button type="button" className={btnLine} onClick={() => go(0)}>Буцах</button>
@@ -215,43 +190,7 @@ export function OrderForm({ testPanel = false }: { testPanel?: boolean }) {
           <section className="max-w-[640px]" aria-labelledby="s2">
             <h2 id="s2" className="m-0 text-2xl font-bold tracking-[-.02em]">Хэнд, хаана хүргэх вэ?</h2>
             <div className="mt-12 flex flex-col gap-10">
-              <Field label="Нэр" error={errors.name}>
-                <TextInput value={f.name} onChange={set("name")} invalid={!!errors.name} autoComplete="name" />
-              </Field>
-              <Field label="Утас" error={errors.phone}>
-                <TextInput value={f.phone} onChange={set("phone")} invalid={!!errors.phone} inputMode="tel" autoComplete="tel-national" placeholder="9911 2233" />
-              </Field>
-              <Field label="Имэйл (заавал биш)" hint="Төлбөрийн баримтыг имэйлээр илгээнэ" error={errors.email}>
-                <TextInput value={f.email} onChange={set("email")} invalid={!!errors.email} type="email" inputMode="email" autoComplete="email" />
-              </Field>
-              <Field label="Дүүрэг" error={errors.district}>
-                <Select value={f.district} onChange={set("district")} invalid={!!errors.district}>
-                  <option value="" disabled>Сонгоно уу</option>
-                  {DELIVERY.districts.map((d) => <option key={d} value={d}>{d}</option>)}
-                  <option value={OTHER}>Бусад газар</option>
-                </Select>
-              </Field>
-              {otherDistrict ? (
-                <div className="border-[1.5px] border-ink p-6 text-base leading-[1.7]">
-                  Бусад газар хүргэх эсэхийг утсаар тохирно:{" "}
-                  {CONTACT.phones.map((p, i) => (
-                    <span key={p.href}>{i > 0 && " · "}<a href={p.href} className="inline-flex min-h-11 items-center font-bold underline underline-offset-4">{p.label}</a></span>
-                  ))}
-                </div>
-              ) : (
-                <>
-                  <Field label="Хаяг" hint="Хороо, байр, орц, тоот" error={errors.address}>
-                    <TextArea value={f.address} onChange={set("address")} invalid={!!errors.address} autoComplete="street-address" rows={2} />
-                  </Field>
-                  <Field label="Тэмдэглэл (заавал биш)" error={errors.note}>
-                    <TextArea value={f.note} onChange={set("note")} rows={2} />
-                  </Field>
-                </>
-              )}
-              {/* Honeypot — хүнд харагдахгүй */}
-              <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
-                <label>Вэбсайт<input tabIndex={-1} autoComplete="off" value={f.website} onChange={set("website")} /></label>
-              </div>
+              <DeliveryFields f={f} set={set} errors={errors} />
             </div>
             {fatal && <p role="alert" className="mt-8 text-base font-medium text-[#c62828]">{fatal}</p>}
             <div className="mt-14 flex flex-wrap gap-4">

@@ -6,7 +6,7 @@ import { Nav } from "@/components/Nav";
 import { RetryButton, StatusPoller } from "@/components/order/StatusPoller";
 import { SummaryRow } from "@/components/order/ui";
 import { alert } from "@/lib/alert";
-import { CONTACT, SHOW_PRICES } from "@/lib/config";
+import { CONTACT } from "@/lib/config";
 import { db, isUuid } from "@/lib/db";
 import { itemsText, markPaid } from "@/lib/fulfil";
 import { displayLink } from "@/lib/links";
@@ -40,7 +40,7 @@ export default async function OrderStatusPage({ params }: { params: Promise<{ id
 
   return (
     <main className="w-full overflow-x-clip bg-white text-ink">
-      <Nav showPrices={SHOW_PRICES} home={false} />
+      <Nav home={false} />
       <StatusPoller orderId={order.id} status={order.status} />
       <div className="mx-auto max-w-[1360px] px-6 pt-[96px] md:px-12">
         <p className={`${eyebrow} mb-6 text-mute`}>Захиалга {order.code}</p>

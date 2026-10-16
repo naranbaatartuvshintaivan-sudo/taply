@@ -51,3 +51,46 @@ body {
 .marquee:hover .marquee-col {
   animation-play-state: paused;
 }
+
+/* Сагсанд бараа нисэж ирэхэд icon савлаж, badge томорч гарна (components/cart/fly.ts, CartButton) */
+@keyframes cart-bump {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.25) rotate(-8deg);
+  }
+  60% {
+    transform: scale(.92) rotate(5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes cart-badge-pop {
+  0% {
+    transform: scale(.4);
+  }
+  55% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cart-bump {
+  animation: cart-bump .5s cubic-bezier(.3, 1.4, .5, 1);
+}
+
+.cart-badge-pop {
+  animation: cart-badge-pop .45s cubic-bezier(.3, 1.6, .5, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-bump,
+  .cart-badge-pop {
+    animation: none;
+  }
+}

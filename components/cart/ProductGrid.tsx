@@ -7,6 +7,7 @@ import { fmt, FROM_PRICE, type StandardSku } from "@/lib/pricing";
 import { CUSTOM_ITEM, SHOP, shopItem } from "@/lib/shop";
 import { Photo } from "../Photo";
 import { useCart } from "./context";
+import { flyToCart } from "./fly";
 import { loadModal } from "./lazy";
 
 // Modal (framer-motion, stepper) эхний JS-д орохгүй — зураг руу хулгана/хуруу ойртоход урьдчилан татна
@@ -28,9 +29,12 @@ export function ProductGrid() {
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
-  const quickAdd = (sku: StandardSku) => {
-    dispatch({ type: "add", sku, qty: 1, stock: null });
-    announce(`${shopItem(sku).name} сагсанд нэмэгдлээ`);
+  // Зураг сагс руу нисэж хүрмэгц тоо нэмэгдэнэ (fly.ts)
+  const quickAdd = (sku: StandardSku, from: Element | null) => {
+    flyToCart(from, () => {
+      dispatch({ type: "add", sku, qty: 1, stock: null });
+      announce(`${shopItem(sku).name} сагсанд нэмэгдлээ`);
+    });
     setAdded(sku);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setAdded(null), 1600);
@@ -61,7 +65,7 @@ export function ProductGrid() {
               <div className="mt-2 text-[15px] font-medium">{fmt(FROM_PRICE.standard)}₮-өөс</div>
               <button
                 type="button"
-                onClick={() => quickAdd(p.sku)}
+                onClick={(e) => quickAdd(p.sku, e.currentTarget.closest("figure"))}
                 aria-label={`${p.name} сагсанд нэмэх`}
                 className={`${chip} mt-3 border-[1.5px] border-ink hover:bg-ink hover:text-white`}
               >

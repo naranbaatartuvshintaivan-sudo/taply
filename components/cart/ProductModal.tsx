@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { cartQuote, cartReducer, lineCap, qtyOf } from "@/lib/cart";
 import { TOO_MANY_MESSAGE } from "@/lib/checkout";
 import { fmt, quote, type StandardSku } from "@/lib/pricing";
@@ -9,6 +9,7 @@ import { shopItem } from "@/lib/shop";
 import { ContactLine } from "../ContactLine";
 import { btnLine, btnSolid, eyebrow, Stepper } from "../order/ui";
 import { useCart } from "./context";
+import { flyToCart } from "./fly";
 import { CloseButton, Sheet } from "./Sheet";
 
 // Барааны modal — ProductGrid-ээс lazy (next/dynamic) ачаалагдана
@@ -54,6 +55,7 @@ function ModalBody({
   const blocked = !combined.ok;
 
   const add = () => dispatch({ type: "add", sku, qty, stock: null });
+  const photo = useRef<HTMLDivElement>(null);
 
   return (
     // Утсан дээр: зураг + тайлбар гүйлгэгдэнэ, тоо/үнэ/товч доор үргэлж харагдана
@@ -61,7 +63,7 @@ function ModalBody({
       <div className="absolute right-3 top-3 z-10 rounded-full bg-white/90">
         <CloseButton onClick={onClose} />
       </div>
-      <div className="relative h-[30dvh] w-full flex-none bg-ph md:h-auto md:min-h-[600px]">
+      <div ref={photo} className="relative h-[30dvh] w-full flex-none bg-ph md:h-auto md:min-h-[600px]">
         <Image src={p.src} alt={p.alt} fill sizes="(min-width:768px) 480px, 100vw" className="object-cover" />
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
@@ -120,8 +122,11 @@ function ModalBody({
               className={`${btnLine} flex-1 px-4!`}
               disabled={blocked}
               onClick={() => {
-                add();
-                announce(`${p.name} × ${qty} сагсанд нэмэгдлээ`);
+                // Зураг modal-аас сагс руу нисэж хүрмэгц тоо нэмэгдэнэ (fly.ts)
+                flyToCart(photo.current, () => {
+                  add();
+                  announce(`${p.name} × ${qty} сагсанд нэмэгдлээ`);
+                });
                 onClose();
               }}
             >

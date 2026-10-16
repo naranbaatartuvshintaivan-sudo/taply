@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Footer } from "./Footer";
 import { Nav } from "./Nav";
-import { SHOW_PRICES } from "@/lib/config";
 
 const wrap = "mx-auto max-w-[1360px] px-6 md:px-12";
 const eyebrow = "text-[13px] font-medium uppercase tracking-[.22em]";
@@ -22,7 +21,7 @@ export function LegalPage({
 }) {
   return (
     <main className="w-full overflow-x-clip bg-white text-ink">
-      <Nav showPrices={SHOW_PRICES} home={false} />
+      <Nav home={false} />
       <div className={`${wrap} pt-[120px]`}>
         <p className={`${eyebrow} mb-6 text-mute`}>{label}</p>
         <h1 className="m-0 max-w-[900px] text-[clamp(44px,7vw,104px)] font-extrabold leading-[.98] tracking-[-.045em]">

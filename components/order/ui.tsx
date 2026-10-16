@@ -72,30 +72,32 @@ export function Stepper({
   value,
   onChange,
   max,
+  min = 0,
   label,
 }: {
   value: number;
   onChange: (v: number) => void;
   max: number;
+  min?: number;
   label: string;
 }) {
   const b =
     "inline-flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-ink text-xl font-medium hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink";
   return (
     <div className="flex items-center gap-3" role="group" aria-label={label}>
-      <button type="button" className={b} onClick={() => onChange(Math.max(0, value - 1))} disabled={value <= 0} aria-label={`${label} хасах`}>
+      <button type="button" className={b} onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} aria-label={`${label} хасах`}>
         −
       </button>
       <input
         type="number"
         inputMode="numeric"
-        min={0}
+        min={min}
         max={max}
         value={value}
         aria-label={`${label} тоо`}
         onChange={(e) => {
           const n = Math.floor(Number(e.target.value));
-          onChange(Number.isFinite(n) ? Math.min(max, Math.max(0, n)) : 0);
+          onChange(Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : min);
         }}
         className="h-11 w-14 [appearance:textfield] border-0 bg-transparent text-center text-xl font-bold outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />

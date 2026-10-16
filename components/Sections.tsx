@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CONTACT, MESSENGER_URL, PRICE_CARDS, SHOW_PRICES } from "@/lib/config";
+import { DELIVERY, REFUND_DAYS } from "@/lib/config";
 import { CUSTOMERS, customerAlt, distribute, type Customer } from "@/lib/customers";
-import { PRODUCTS } from "@/lib/products";
+import { CUSTOM_PHONE_ONLY_FROM, fmt, priceTiers } from "@/lib/pricing";
+import { ProductGrid } from "./cart/ProductGrid";
+import { ContactLine } from "./ContactLine";
 import { GoLink } from "./PageTransition";
 import { Photo } from "./Photo";
 
@@ -28,7 +30,7 @@ export function Hero() {
         </p>
         <div className="flex flex-wrap gap-4">
           <GoLink
-            id="order"
+            id="products"
             className="inline-flex min-h-14 items-center justify-center rounded-full bg-ink px-9 text-[15px] font-bold text-white hover:bg-[#2a2a2a]"
           >
             Захиалах
@@ -262,227 +264,71 @@ export function Offer() {
   );
 }
 
-const chip = "inline-flex min-h-11 items-center justify-center rounded-full px-4 text-[13px] font-bold";
-const chipSolid = `${chip} bg-ink text-white hover:bg-[#2a2a2a]`;
-const chipLine = `${chip} border-[1.5px] border-ink hover:bg-ink hover:text-white`;
-
 export function Products() {
   return (
     <section id="products" className={`${wrap} pt-[240px]`}>
+      {/* Хуучин #order линк (IG bio, пост, QR) энд ирнэ */}
+      <span id="order" aria-hidden className="block" />
       <p className={`${eyebrow} mb-6 text-mute`}>Бүтээгдэхүүн</p>
-      <h2 className={`${h2} mb-[120px] max-w-[820px]`}>Бидний хийдэг зүйлс.</h2>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-        {PRODUCTS.map((p, i) => (
-          <figure key={p.slug} className="m-0">
-            <Link href={`/products/${p.slug}`} aria-label={`${p.name} — дэлгэрэнгүй`} className="block hover:opacity-90">
-              <Photo
-                n={i + 1}
-                label={p.name}
-                src={p.src}
-                alt={p.alt}
-                aspect="3 / 4"
-                sizes="(min-width:1024px) 34vw, (min-width:640px) 50vw, 100vw"
-              />
-            </Link>
-            <figcaption className="mt-4">
-              <div className="text-[15px] font-medium">{p.name}</div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Link href={`/products/${p.slug}`} className={chipSolid}>
-                  Дэлгэрэнгүй
-                </Link>
-                {SHOW_PRICES && (
-                  <GoLink id="price" className={chipLine}>
-                    Үнэ
-                  </GoLink>
-                )}
-                <GoLink id="order" className={chipLine}>
-                  Захиалах
-                </GoLink>
-              </div>
-            </figcaption>
-          </figure>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export function Price() {
-  return (
-    <section id="price" className={`${wrap} pt-[240px]`}>
-      <p className={`${eyebrow} mb-6 text-mute`}>Үнэ</p>
-      <h2 className={`${h2} mb-[120px]`}>Нэг удаа төлнө.</h2>
-      <div className="flex flex-wrap gap-6">
-        {PRICE_CARDS.map((c) => (
-          <div
-            key={c.name}
-            className={
-              "flex-[1_1_440px] px-6 py-14 sm:px-12 " +
-              (c.dark ? "bg-ink text-white" : "border-[1.5px] border-ink")
-            }
-          >
-            <div className={`${eyebrow} ${c.dark ? "text-[#9a9a9a]" : "text-mute"}`}>{c.name}</div>
-            <div className="mb-2 mt-6 text-[64px] font-extrabold leading-none tracking-[-.04em]">
-              {c.main}{" "}
-              <span className={`text-xl font-medium tracking-normal ${c.dark ? "text-[#9a9a9a]" : "text-mute"}`}>
-                / 1 ширхэг
-              </span>
-            </div>
-            <div className={`mb-14 text-[15px] ${c.dark ? "text-[#b5b5b5]" : "text-body"}`}>{c.sub}</div>
-            {c.rows.map((r, i) => (
-              <div
-                key={r.label}
-                className={
-                  "flex justify-between gap-4 border-t py-[18px] text-base " +
-                  (c.dark ? "border-[#3a3a3a] " : "border-line ") +
-                  (i === c.rows.length - 1 ? (c.dark ? "border-b border-b-[#3a3a3a]" : "border-b border-b-line") : "")
-                }
-              >
-                <span>{r.label}</span>
-                <strong>{r.value}</strong>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="mt-6 flex flex-wrap items-baseline gap-x-16 gap-y-6 border-[1.5px] border-ink px-6 py-12 sm:px-12">
-        <div className="flex-[0_0_auto] text-[clamp(44px,5vw,64px)] font-extrabold leading-none tracking-[-.04em]">
-          7 хоног
-        </div>
-        <div className="max-w-[560px] flex-[1_1_300px]">
-          <div className="text-xl font-bold tracking-[-.01em]">Ажиллахгүй бол мөнгийг бүтэн буцаана.</div>
-          <p className="mb-0 mt-3 text-[15px] leading-[1.7] text-body">
-            Хүлээн авснаас хойш 7 хоногийн дотор карт ажиллахгүй бол бидэнд хэлээрэй — төлсөн
-            мөнгийг тань бүтэн буцаана.{" "}
-            <Link href="/terms" className="font-bold text-ink underline underline-offset-4 hover:opacity-55">
-              Нөхцөл
-            </Link>
-          </p>
-        </div>
-      </div>
-
-      <p className="mb-0 mt-12 max-w-[640px] text-[15px] leading-[1.7] text-body">
-        Custom загвар үнэгүй. Лого, бичвэрээ илгээнэ, батлагдсанаас хойш 3–5 хоногт бэлэн. Хот
-        доторх хүргэлт 7,000₮, 3 ба түүнээс дээш ширхэг бол үнэгүй. 30 ширхэгээс дээш бол утсаар
-        тохирно.
+      <h2 className={`${h2} mb-6 max-w-[820px]`}>Сонгоод шууд захиална.</h2>
+      <p className="mb-[96px] mt-0 max-w-[520px] text-lg leading-[1.6] text-body">
+        Олон авах тусам хямд: 3 ба түүнээс дээш ширхэг бол нэгж үнэ буурч, хүргэлт үнэгүй.
       </p>
+      <ProductGrid />
     </section>
   );
 }
 
-// contact: /custom (Phase 3) бэлэн болтол доорх чатын хэсэг рүү гүйлгэнэ
-const orderChoices: {
-  href?: string;
-  /** Гадаад холбоос — шинэ tab-д нээгдэнэ */
-  external?: string;
-  eyebrow: string;
-  title: string;
-  desc: string;
-  from: string;
-  cta: string;
-  dark?: boolean;
-}[] = [
-  {
-    href: "/order",
-    eyebrow: "Facebook · Instagram",
-    title: "Энгийн карт",
-    desc: "Бэлэн загвартай наалт эсвэл стенд. Линкээ оруулаад шууд төлнө.",
-    from: "34,900₮-өөс",
-    cta: "Захиалах",
-  },
-  {
-    // Custom захиалгыг Facebook Messenger-ээр гараар зохицуулна — Messenger шууд (шинэ tab)
-    external: MESSENGER_URL,
-    eyebrow: "Таны брэнд",
-    title: "Өөрийн логотой",
-    desc: "Логогоо Messenger-ээр илгээнэ үү. 3 загвар гаргаж үзүүлнэ, та сонгоно.",
-    from: "44,900₮-өөс",
-    cta: "Messenger-ээр бичих",
-    dark: true,
-  },
-];
-
-export function Order() {
+// Footer-ийн шууд дээрх жижиг үнийн блок. Хуучин #price, #contact линк энд ирнэ.
+export function PriceInfo() {
+  const cols = [
+    { id: "standard" as const, name: "Энгийн", sub: "Facebook · Instagram наалт, стенд" },
+    { id: "custom" as const, name: "Өөрийн логотой", sub: "Лого, QR, монгол бичвэр" },
+  ];
   return (
-    <section id="order" className={`${wrap} pt-[280px]`}>
-      <h2 className="m-0 text-[clamp(64px,11vw,168px)] font-extrabold leading-[.95] tracking-[-.045em]">
-        Захиалах.
+    <section id="price" aria-labelledby="price-h" className={`${wrap} pt-[200px]`}>
+      <p className={`${eyebrow} mb-4 text-mute`}>Үнэ ба хөнгөлөлт</p>
+      <h2 id="price-h" className="m-0 text-[clamp(32px,4vw,48px)] font-bold leading-[1.1] tracking-[-.03em]">
+        Нэг удаа төлнө.
       </h2>
-      <p className="mb-16 mt-14 max-w-[520px] text-xl leading-[1.55] text-[#2a2a2a]">
-        Аль картаа сонгоод онлайнаар захиална уу. Бусдыг нь бид хийнэ.
+      <div className="mt-12 grid gap-x-12 gap-y-10 md:grid-cols-2">
+        {cols.map((c) => (
+          <table key={c.id} className="w-full border-collapse text-left">
+            <caption className="pb-4 text-left">
+              <span className="block text-lg font-bold tracking-[-.01em]">{c.name}</span>
+              <span className="mt-1 block text-sm text-mute">{c.sub}</span>
+            </caption>
+            <tbody>
+              {priceTiers(c.id).map((r) => (
+                <tr key={r.label} className="border-t border-line last:border-b">
+                  <th scope="row" className="py-3 text-[15px] font-normal text-body">
+                    {r.label}
+                  </th>
+                  <td className="py-3 text-right text-[15px] font-bold tabular-nums">{r.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
+      </div>
+      <ul className="m-0 mt-10 grid list-none gap-3 p-0 text-[15px] leading-[1.6] text-body md:grid-cols-3 md:gap-8">
+        <li>
+          <strong className="text-ink">{DELIVERY.freeFromQty} ба түүнээс дээш ширхэг:</strong> нэгж үнэ буурна, хүргэлт үнэгүй.
+        </li>
+        <li>
+          <strong className="text-ink">Хүргэлт:</strong> хот дотор {fmt(DELIVERY.fee)}₮.
+        </li>
+        <li>
+          <strong className="text-ink">{REFUND_DAYS} хоногийн баталгаа:</strong> ажиллахгүй бол мөнгийг бүтэн буцаана.{" "}
+          <Link href="/terms" className="font-bold text-ink underline underline-offset-4 hover:opacity-55">
+            Нөхцөл
+          </Link>
+        </li>
+      </ul>
+      <p id="contact" className="mb-0 mt-8 text-[15px] leading-[1.6] text-body max-md:scroll-mt-24">
+        Асуух зүйл, {CUSTOM_PHONE_ONLY_FROM}+ ширхэг, хотоос гадуур хүргэлт — утсаар эсвэл имэйлээр:{" "}
+        <ContactLine />
       </p>
-      <div className="grid gap-6 md:grid-cols-2">
-        {orderChoices.map((c) => {
-          const cls =
-            "group flex min-h-[320px] flex-col justify-between px-6 py-10 sm:px-12 sm:py-14 " +
-            (c.dark ? "bg-ink text-white hover:bg-[#1f1f1f]" : "border-[1.5px] border-ink hover:bg-[#f5f5f5]");
-          const body = (
-            <>
-              <div>
-                <div className={`${eyebrow} ${c.dark ? "text-[#9a9a9a]" : "text-mute"}`}>{c.eyebrow}</div>
-                <div className="mt-6 text-[clamp(36px,4.5vw,60px)] font-extrabold leading-[1.02] tracking-[-.04em]">
-                  {c.title}
-                </div>
-                <p className={`mb-0 mt-6 max-w-[400px] text-base leading-[1.6] ${c.dark ? "text-[#b5b5b5]" : "text-body"}`}>
-                  {c.desc}
-                </p>
-              </div>
-              <div className="mt-12 flex items-center justify-between gap-4 text-[15px] font-bold">
-                <span>{c.from}</span>
-                <span className="inline-flex items-center gap-2">
-                  {c.cta} <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
-                </span>
-              </div>
-            </>
-          );
-          if (c.external) {
-            return (
-              <a key={c.title} href={c.external} target="_blank" rel="noopener noreferrer" className={cls}>
-                {body}
-              </a>
-            );
-          }
-          return c.href ? (
-            <Link key={c.title} href={c.href} className={cls}>
-              {body}
-            </Link>
-          ) : (
-            <GoLink key={c.title} id="contact" className={cls}>
-              {body}
-            </GoLink>
-          );
-        })}
-      </div>
-
-      <div id="contact" className="max-md:scroll-mt-24">
-        <p className="mb-0 mt-16 text-lg font-bold text-ink">Логогоо илгээнэ үү, 3 загвар гаргаж үзүүлнэ.</p>
-        <p className="mb-5 mt-3 text-base text-body">Асуух зүйл байвал чатлаарай:</p>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href={CONTACT.instagram}
-            className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-ink px-7 text-[15px] font-bold hover:bg-ink hover:text-white"
-          >
-            Instagram DM
-          </a>
-          <a
-            href={CONTACT.facebook}
-            className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-ink px-7 text-[15px] font-bold hover:bg-ink hover:text-white"
-          >
-            Facebook Messenger
-          </a>
-        </div>
-        <p className="mb-0 mt-8 text-base text-body">
-          Утас:{" "}
-          {CONTACT.phones.map((p, i) => (
-            <span key={p.href}>
-              {i > 0 && " · "}
-              <a href={p.href} className="inline-flex min-h-11 items-center font-bold text-ink hover:opacity-55">
-                {p.label}
-              </a>
-            </span>
-          ))}
-        </p>
-      </div>
     </section>
   );
 }

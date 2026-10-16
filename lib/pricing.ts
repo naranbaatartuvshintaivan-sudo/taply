@@ -84,3 +84,26 @@ export function quote(type: CardType, items: { sku: string; qty: number }[]): Qu
     breakdown: `${priceText}, ${deliveryText}`,
   };
 }
+
+// ── Харуулах зориулалттай (нүүр хуудасны "-өөс" үнэ, "Үнэ ба хөнгөлөлт" блок) ──
+// TABLE-ээс шууд үүсгэнэ → нэг эх сурвалж. Серверийн тооцоонд оролцохгүй.
+// Шатлалын хил (3, 10) subtotalFor-той таарахыг pricing.test.ts шалгана.
+export const FROM_PRICE: Record<CardType, number> = { standard: TABLE.standard.one, custom: TABLE.custom.one };
+
+export type PriceTier = { label: string; value: string };
+
+export function priceTiers(type: CardType): PriceTier[] {
+  const t = TABLE[type];
+  const rows: PriceTier[] = [
+    { label: "1 ширхэг", value: `${fmt(t.one)}₮` },
+    { label: type === "standard" ? "2 ширхэг (FB + IG)" : "2 ширхэг", value: `${fmt(t.two)}₮` },
+    { label: "3–9 ширхэг", value: `${fmt(t.from3)}₮ / ш` },
+  ];
+  if (type === "custom") {
+    rows.push({ label: `10–${CUSTOM_PHONE_ONLY_FROM - 1} ширхэг`, value: `${fmt(t.from10)}₮ / ш` });
+    rows.push({ label: `${CUSTOM_PHONE_ONLY_FROM}+ ширхэг`, value: "Утсаар" });
+  } else {
+    rows.push({ label: "10+ ширхэг", value: `${fmt(t.from10)}₮ / ш` });
+  }
+  return rows;
+}

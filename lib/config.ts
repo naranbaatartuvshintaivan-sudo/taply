@@ -1,4 +1,4 @@
-// Сайтын тохиргоо — үнийн хэсгийг нуух бол SHOW_PRICES = false
+// Сайтын тохиргоо — нүүр хуудасны "Үнэ ба хөнгөлөлт" блокийг нуух бол SHOW_PRICES = false
 export const SHOW_PRICES = true;
 
 // Шилжилтийн давалгаа аль талаас эхлэх вэ: "left" (зүүн дээд) | "right" (баруун дээд)
@@ -21,41 +21,6 @@ export function messengerUrl(facebook: string): string {
   return `https://m.me/${id}`;
 }
 export const MESSENGER_URL = messengerUrl(CONTACT.facebook);
-
-export type PriceRow = { label: string; value: string };
-export type PriceCard = {
-  name: string;
-  main: string;
-  sub: string;
-  rows: PriceRow[];
-  dark?: boolean;
-};
-
-export const PRICE_CARDS: PriceCard[] = [
-  {
-    name: "Энгийн",
-    main: "34,900₮",
-    sub: "Facebook эсвэл Instagram — нэг карт",
-    rows: [
-      { label: "1 ширхэг", value: "34,900₮" },
-      { label: "2 ширхэг (FB + IG)", value: "55,900₮" },
-      { label: "3–9 ширхэг", value: "27,900₮ / ш" },
-      { label: "10+ ширхэг", value: "24,900₮ / ш" },
-    ],
-  },
-  {
-    name: "Өөрийн логотой",
-    main: "44,900₮",
-    sub: "Лого, QR, монгол бичвэр — нэг карт",
-    dark: true,
-    rows: [
-      { label: "1 ширхэг", value: "44,900₮" },
-      { label: "2 ширхэг", value: "69,900₮" },
-      { label: "3–9 ширхэг", value: "32,900₮ / ш" },
-      { label: "10+ ширхэг", value: "29,900₮ / ш" },
-    ],
-  },
-];
 
 // Хот доторх хүргэлт — бусад газар утсаар тохирно
 export const DELIVERY = {

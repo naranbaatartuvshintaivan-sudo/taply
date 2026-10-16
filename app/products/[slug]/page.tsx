@@ -42,7 +42,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="w-full overflow-x-clip bg-white text-ink">
-      <Nav showPrices={SHOW_PRICES} home={false} />
+      <Nav home={false} />
 
       <div className={`${wrap} pt-12`}>
         <Link
@@ -83,7 +83,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 </Link>
               )}
               <Link
-                href="/#order"
+                href="/#products"
                 className={`${btn} border-[1.5px] border-ink hover:bg-ink hover:text-white`}
               >
                 Захиалах
